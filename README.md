@@ -12,6 +12,16 @@
 
 > **兼容性**：已在《魔兽争霸 III》3.0.0 上实测通过；更早的版本未做验证，不保证可用。
 
+## 下载
+
+[最新版本](https://github.com/alfredshn000/ModelForge/releases/latest)
+
+- `ModelForge-win64.zip` — 解压后运行里面的 `ModelForge.exe`。整个文件夹要一起保留，只把 exe 拖出来启动不了
+- `ModelForge.exe` — 单文件，首次启动释放运行时约 2 秒，之后走缓存
+
+要求 Windows 10/11 x64 + WebView2 运行时（Win11 自带，Win10 多数随 Edge 已装）。
+没有也能跑，会退回系统浏览器，功能一致。改动历史见[更新记录](CHANGELOG.zh-CN.md)。
+
 ## 能做什么
 
 | 场景 | 说明 |
