@@ -1,0 +1,51 @@
+# ---------------- 构建产物 ----------------
+mdx-studio/build-out/
+mdx-toolkit/out/
+mdx-toolkit/work/
+mdx-toolkit/review/
+build/
+dist/
+*.egg-info/
+
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# ---------------- 游戏素材（版权原因不入库，需要自备） ----------------
+*.mdx
+*.mdl
+*.mdx2
+*.blp
+*.dds
+*.tif
+*.tiff
+Ghost Captain/
+work-demo/
+test-models/
+prototype/models/
+_research/
+ReteraModelStudio_0.04.7a9/
+
+# ---------------- 本地状态与临时文件 ----------------
+.workbuddy/
+*.bak
+*.log
+/diag-*.png
+/diag_*.py
+/footman_orm_alpha.png
+# 扁平版 logo，make_icons.py 用的是 no_background 那张
+/ModelForge_logo.png
+mdx-studio/diag-*.png
+mdx-studio/preview.png
+# 体检基线原始数据太重，人类可读的 .md 保留
+mdx-toolkit/reports/*.json
+prototype/*.png
+
+# ---------------- 系统 ----------------
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+  <title>MDX Studio — 界面原型</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#14181e; --panel2:#1a1f26; --panel3:#1f252d;
+    --line:#242b34; --line2:#2e3742;
+    --text:#dfe4ea; --dim:#7d8794; --faint:#525c68;
+    --accent:#4c9aff; --ok:#3fb950; --warn:#d98b3a; --danger:#e5534b;
+    --radius:4px;
+    --row:26px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font:12.5px/1.45 system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+    overflow:hidden; user-select:none;
+  }
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+  input,select{font:inherit; color:var(--text); background:var(--panel3);
+    border:1px solid var(--line2); border-radius:3px; padding:3px 6px; outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  input[type=range]{padding:0}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- 骨架 ---------- */
+  .app{display:grid; grid-template-rows:44px 1fr 96px; height:100vh}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:8px; padding:0 12px;
+    background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  .tb-btn{
+    height:26px; padding:0 10px; border-radius:3px; display:flex;
+    align-items:center; gap:6px; color:var(--text); border:1px solid transparent;
+  }
+  .tb-btn:hover{background:var(--panel3)}
+  .tb-btn.primary{background:#1e4f8f; border-color:#2a63ad}
+  .tb-btn.primary:hover{background:#255da6}
+  .tb-btn.ghost{border-color:var(--line2)}
+  .tb-btn[disabled]{color:var(--faint); cursor:default; background:none; border-color:transparent}
+  .sep{width:1px; height:18px; background:var(--line2); margin:0 4px}
+  .fileinfo{display:flex; align-items:baseline; gap:8px; margin-left:6px;
+    min-width:0; overflow:hidden; white-space:nowrap}
+  .fileinfo b{font-weight:600}
+  .fileinfo span{color:var(--dim); font-size:11.5px}
+  .spacer{flex:1}
+  .dirty{
+    display:flex; align-items:center; gap:6px; height:24px; padding:0 9px;
+    border-radius:12px; background:#1a2a18; color:#8fd08a; font-size:11.5px;
+    border:1px solid #2c4529; cursor:pointer;
+  }
+  .dirty.zero{background:var(--panel2); color:var(--faint); border-color:var(--line)}
+  .dirty .dot{width:6px; height:6px; border-radius:50%; background:var(--ok)}
+  .dirty.zero .dot{background:var(--faint)}
+  .badge-ok{
+    display:flex; align-items:center; gap:5px; height:24px; padding:0 9px;
+    border-radius:12px; font-size:11.5px; color:var(--ok);
+    background:#13251a; border:1px solid #22422c;
+  }
+
+  /* ---------- 主区 ---------- */
+  .main{display:grid; grid-template-columns:236px 1fr 312px; min-height:0}
+  @media (max-width:1280px){ .main{grid-template-columns:204px 1fr 284px} }
+  @media (max-width:1040px){
+    .main{grid-template-columns:184px 1fr 260px}
+    .fileinfo span{display:none}
+  }
+
+  /* 左：资源树 */
+  .sidebar{background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0}
+  .sb-head{
+    height:30px; display:flex; align-items:center; padding:0 12px;
+    color:var(--faint); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+    border-bottom:1px solid var(--line);
+  }
+  .tree{padding:6px 0; overflow:auto}
+  .tree-item{
+    display:flex; align-items:center; gap:8px; height:28px; padding:0 12px;
+    cursor:pointer; color:var(--dim); border-left:2px solid transparent;
+  }
+  .tree-item:hover{background:var(--panel2); color:var(--text)}
+  .tree-item.on{background:#1b2532; color:var(--text); border-left-color:var(--accent)}
+  .tree-item .ico{width:14px; text-align:center; opacity:.75; font-size:12px}
+  .tree-item .lbl{flex:1}
+  .tree-item .cnt{
+    font-size:10.5px; color:var(--faint); background:var(--panel3);
+    padding:1px 6px; border-radius:9px; min-width:22px; text-align:center;
+  }
+  .tree-item.on .cnt{color:var(--accent)}
+  .tree-sec{
+    padding:10px 12px 4px; color:var(--faint); font-size:10.5px; letter-spacing:.1em;
+  }
+
+  /* 中：视口 + 表格（可拖动上下分栏） */
+  .center{display:grid; grid-template-rows:46% 6px 1fr; min-height:0}
+  .splitter{
+    background:var(--line); cursor:row-resize; display:flex;
+    align-items:center; justify-content:center; z-index:5;
+  }
+  .splitter:hover{background:#33414e}
+  .splitter i{width:38px; height:2px; background:#3c4a56; border-radius:1px}
+  .viewport{position:relative; background:
+      radial-gradient(120% 90% at 50% 0%, #182430 0%, #0d1015 62%); overflow:hidden}
+  .vp-canvas{
+    position:absolute; inset:0; width:100%; height:100%; display:block;
+    cursor:grab; touch-action:none;
+  }
+  .vp-canvas:active{cursor:grabbing}
+  .vp-fallback{
+    position:absolute; inset:0; display:none; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px;
+    text-align:center; pointer-events:none;
+  }
+  .vp-fallback.on{display:flex}
+  .vp-fallback.banner{justify-content:flex-start; padding-top:52px}
+  .fb-card{
+    display:flex; flex-direction:column; gap:5px; max-width:560px;
+    background:rgba(14,17,22,.92); border:1px solid #3a3020;
+    border-left:2px solid #e0a33f; border-radius:4px; padding:9px 12px;
+    text-align:left; box-shadow:0 8px 24px rgba(0,0,0,.45);
+  }
+  .fb-card b{font-size:12px; color:#e0a33f}
+  .fb-card span{font-size:11px; color:#8f9aa6; line-height:1.55;
+    font-family:ui-monospace,Consolas,monospace; word-break:break-all}
+  .hud{position:absolute; pointer-events:none}
+  .hud > *{pointer-events:auto}
+  .hud-tl{top:10px; left:12px; display:flex; flex-direction:column; gap:2px;
+    max-width:calc(100% - 130px)}
+  .hud-tl .t1{font-size:12px; color:var(--text); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  .hud-tl .t2{font-size:11px; color:var(--faint); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  .hud-tr{top:10px; right:12px; display:flex; gap:4px}
+  .seg{display:flex; background:rgba(20,24,30,.82); border:1px solid var(--line2); border-radius:4px; overflow:hidden}
+  .seg button{padding:3px 10px; font-size:11px; color:var(--dim)}
+  .seg button.on{background:#22303f; color:var(--text)}
+  .hud-bl{bottom:12px; left:12px}
+  .hud-br{bottom:12px; right:12px; display:flex; align-items:center; gap:8px;
+    background:rgba(20,24,30,.7); padding:4px 8px; border-radius:4px; border:1px solid var(--line)}
+  .hud-br .zbar{width:74px; height:3px; background:var(--line2); border-radius:2px; position:relative}
+  .hud-br .zbar i{position:absolute; left:0; top:0; height:3px; width:38%; background:var(--accent); border-radius:2px; display:block}
+  .hud-br span{font-size:10.5px; color:var(--dim)}
+
+  /* 右：属性 */
+  .inspector{background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0}
+  .insp-head{
+    height:30px; display:flex; align-items:center; gap:8px; padding:0 12px;
+    border-bottom:1px solid var(--line); color:var(--faint);
+    font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+  }
+  .insp-body{overflow:auto; padding:12px; display:flex; flex-direction:column; gap:14px}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field > label{color:var(--dim); font-size:11px}
+  .field input, .field select{width:100%}
+  .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace; font-size:11.5px}
+  .kv{display:flex; justify-content:space-between; gap:10px; padding:3px 0; font-size:11.5px}
+  .kv .k{color:var(--dim)}
+  .kv .v{color:var(--text); text-align:right; word-break:break-all}
+  .divider{height:1px; background:var(--line); margin:2px 0}
+  .diffbox{
+    background:#12212e; border:1px solid #1d3a52; border-left:2px solid var(--accent);
+    border-radius:3px; padding:7px 9px; display:flex; flex-direction:column; gap:3px;
+  }
+  .diffbox .row{font-size:11px; display:flex; gap:6px; align-items:baseline}
+  .diffbox .old{color:#a37a7a; text-decoration:line-through; word-break:break-all}
+  .diffbox .new{color:#7fc4ff; word-break:break-all}
+  .empty{color:var(--faint); font-size:11.5px}
+  .btn-row{display:flex; gap:6px}
+  .btn{
+    height:26px; padding:0 10px; border-radius:3px; border:1px solid var(--line2);
+    font-size:11.5px; color:var(--text); display:inline-flex; align-items:center; gap:5px;
+  }
+  .btn:hover{background:var(--panel3)}
+  .btn.accent{background:#1e4f8f; border-color:#2a63ad}
+  .btn.accent:hover{background:#255da6}
+  .btn.danger{color:#e59a96; border-color:#4a2c2a}
+  .btn.danger:hover{background:#2a1a19}
+  .btn.sm{height:22px; padding:0 7px; font-size:11px}
+  .chips{display:flex; flex-wrap:wrap; gap:4px}
+  .chip{
+    font-size:10.5px; padding:1px 7px; border-radius:9px; border:1px solid var(--line2);
+    color:var(--dim);
+  }
+  .chip.ext{color:#e5b276; border-color:#4a3a24; background:#221a10}
+  .chip.blt{color:#8e99a6; border-color:#2c343e; background:#191e24}
+  .chip.rpl{color:#7fb6f5; border-color:#243d5a; background:#101c29}
+
+  /* ---------- 表区（覆盖在视口上？不，表区属于左侧内容区） ---------- */
+  .tablewrap{background:var(--bg); display:flex; flex-direction:column; min-height:0; overflow:hidden}
+  .tw-bar{
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  .tw-bar .q{width:230px}
+  .tabs{display:flex; gap:2px; margin-left:4px}
+  .tabs button{
+    font-size:11px; padding:3px 9px; border-radius:3px; color:var(--dim);
+  }
+  .tabs button.on{background:var(--panel3); color:var(--text)}
+  .tabs .n{opacity:.55; margin-left:4px}
+  .thead{
+    display:grid; padding:0 12px; height:24px; align-items:center;
+    color:var(--faint); font-size:10.5px; letter-spacing:.06em;
+    border-bottom:1px solid var(--line); background:var(--panel);
+    position:sticky; top:0; z-index:2;
+  }
+  .tbody{overflow:auto; flex:1}
+  .trow{
+    display:grid; padding:0 12px; height:var(--row); align-items:center;
+    border-bottom:1px solid #1a1f26; cursor:pointer; position:relative;
+  }
+  .trow:hover{background:#171c23}
+  .trow.on{background:#1b2532}
+  .trow.on::before{content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accent)}
+  .trow.changed{background:#141f16}
+  .trow.changed:hover{background:#17241a}
+  .trow.changed .cell-path{color:#8fd08a}
+  .cell-path{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text)}
+  .cell-dim{color:var(--dim)}
+  .grid-tex{grid-template-columns:30px 26px 1fr 70px 24px}
+  .grid-mat{grid-template-columns:38px 1fr 96px 70px}
+  .grid-seq{grid-template-columns:26px 1fr 88px 88px 62px 46px}
+  .grid-atc{grid-template-columns:26px 1fr 1fr 52px 1fr}
+  .lb{
+    font-size:10px; padding:0 6px; height:16px; line-height:16px; border-radius:8px;
+    display:inline-block; text-align:center; min-width:44px;
+  }
+  .lb.ext{color:#e5b276; background:#241a0f; border:1px solid #46331f}
+  .lb.blt{color:#8e99a6; background:#181d23; border:1px solid #2b323b}
+  .lb.rpl{color:#7fb6f5; background:#101c29; border:1px solid #233c58}
+  .thumb{
+    width:22px; height:22px; border-radius:2px; display:block;
+    object-fit:cover; background:#0b0e13; border:1px solid var(--line);
+    image-rendering:auto;
+  }
+  .thumb-none{
+    width:22px; height:22px; border-radius:2px; display:flex; align-items:center;
+    justify-content:center; font-size:9px; color:#7a5450;
+    background:repeating-linear-gradient(45deg,#16191e 0 3px,#1d2128 3px 6px);
+    border:1px dashed #4a3230;
+  }
+  .tex-big{
+    width:100%; height:170px; object-fit:contain; border-radius:3px;
+    background:#0b0e13 repeating-conic-gradient(#151a21 0% 25%, #10141a 0% 50%) 50%/16px 16px;
+    border:1px solid var(--line2);
+  }
+  .tex-big-none{
+    width:100%; height:170px; border-radius:3px; display:flex; align-items:center;
+    justify-content:center; font-size:11px; color:var(--faint);
+    background:#11151b; border:1px dashed #2a323b;
+  }
+  .lockbtn{opacity:.28; font-size:11px}
+  .lockbtn:hover{opacity:.9}
+  .lockbtn.on{opacity:1; color:var(--warn)}
+
+  /* ---------- 时间轴 ---------- */
+  .timeline{
+    background:var(--panel); border-top:1px solid var(--line);
+    display:flex; flex-direction:column; position:relative;
+  }
+  .tl-bar{display:flex; align-items:center; gap:10px; padding:5px 12px; border-bottom:1px solid var(--line)}
+  .tl-play{
+    width:24px; height:22px; border:1px solid var(--line2); border-radius:3px;
+    font-size:9px; color:var(--text); display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto;
+  }
+  .tl-play:hover{background:var(--panel3); border-color:#3c4a56}
+  .tl-opt{
+    height:22px; padding:0 7px; border:1px solid var(--line2); border-radius:3px;
+    font-size:10.5px; color:var(--dim); display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto;
+  }
+  .tl-opt:hover{background:var(--panel3); color:var(--text)}
+  .tl-opt.on{color:#cfe4fb; background:#1b3d63; border-color:#2f6ba8}
+  .tl-opt.wide{font-size:10px; letter-spacing:0}
+  .tl-bar .cur{
+    font-size:11.5px; color:var(--text); white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; max-width:36%; flex:0 0 auto;
+  }
+  .tl-bar .cur b{color:var(--accent); font-weight:600}
+  .tl-scrub{
+    flex:1; position:relative; height:16px; background:#11161c;
+    border:1px solid var(--line); border-radius:3px; cursor:pointer; overflow:hidden;
+  }
+  .tl-scrub:hover{border-color:#3c4a56}
+  .tl-bands{position:absolute; inset:0; display:flex}
+  .tl-bands i{height:100%; border-right:1px solid #1b222a; display:block}
+  .tl-bands i.on{background:#17242f}
+  .tl-head{
+    position:absolute; top:0; bottom:0; width:2px; background:var(--accent);
+    box-shadow:0 0 7px rgba(76,154,255,.85); pointer-events:none;
+  }
+  .tl-head::after{
+    content:""; position:absolute; left:-4px; top:0; width:10px; height:5px;
+    background:var(--accent); clip-path:polygon(0 0,100% 0,50% 100%);
+  }
+  .tl-time{font-size:11px; color:var(--dim); min-width:76px; text-align:right; flex:0 0 auto}
+  .tl-track{flex:1; position:relative; margin:0 12px 8px; min-height:0}
+  .tl-seg{
+    position:absolute; top:4px; height:26px; border-radius:3px; overflow:hidden;
+    background:#1e2833; border:1px solid #2b3746; cursor:pointer;
+    display:flex; align-items:center; padding:0 7px;
+  }
+  .tl-seg:hover{background:#25313f}
+  .tl-seg.on{background:#1b3d63; border-color:#2f6ba8}
+  .tl-seg .nm{font-size:10.5px; color:#a8b5c3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .tl-seg.on .nm{color:#cfe4fb}
+  .tl-seg .lp{font-size:9px; color:var(--faint); margin-left:5px}
+  .tl-keys{position:absolute; top:34px; left:0; right:0; height:14px}
+
+  /* ---------- 覆盖层 ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,8,11,.62); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:50;
+  }
+  .overlay.on{display:flex}
+  .dialog{
+    width:520px; max-height:78vh; background:var(--panel); border:1px solid var(--line2);
+    border-radius:6px; box-shadow:0 18px 50px rgba(0,0,0,.55);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .dialog.wide{width:620px}
+  .dlg-head{
+    height:38px; display:flex; align-items:center; padding:0 14px;
+    border-bottom:1px solid var(--line); font-size:12.5px;
+  }
+  .dlg-body{padding:14px; overflow:auto; display:flex; flex-direction:column; gap:12px}
+  .dlg-foot{
+    padding:10px 14px; border-top:1px solid var(--line); display:flex;
+    align-items:center; gap:8px; background:var(--panel2);
+  }
+  .chg-list{display:flex; flex-direction:column; gap:1px; max-height:220px; overflow:auto;
+    border:1px solid var(--line); border-radius:3px; background:#101419}
+  .chg-group{padding:6px 10px; background:var(--panel2); font-size:11px; color:var(--dim);
+    display:flex; justify-content:space-between; position:sticky; top:0}
+  .chg-item{padding:4px 10px; font-size:11px; display:flex; gap:8px; align-items:baseline}
+  .chg-item .p{color:var(--faint); min-width:34px}
+  .chg-item .o{color:#a37a7a; text-decoration:line-through; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .chg-item .a{color:#7fc4ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .hint{font-size:11px; color:var(--faint)}
+  .ok-line{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ok)}
+
+  .toast{
+    position:fixed; bottom:118px; left:50%; transform:translate(-50%,10px);
+    background:#16281b; border:1px solid #2c4a30; color:#a5db9f;
+    padding:7px 14px; border-radius:4px; font-size:11.5px; opacity:0;
+    transition:.22s; pointer-events:none; z-index:80;
+  }
+  .toast.on{opacity:1; transform:translate(-50%,0)}
+  ::-webkit-scrollbar{width:9px; height:9px}
+  ::-webkit-scrollbar-thumb{background:#2a333d; border-radius:5px; border:2px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:#39454f}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <button class="tb-btn ghost">打开</button>
+    <button class="tb-btn ghost">保存</button>
+    <div class="sep"></div>
+    <button class="tb-btn" id="undoBtn" disabled>撤销</button>
+    <button class="tb-btn" id="redoBtn" disabled>重做</button>
+    <div class="sep"></div>
+    <button class="tb-btn primary" id="exportBtn">导出</button>
+    <div class="fileinfo">
+      <b id="fname">—</b>
+      <span id="fmeta"></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="dirty zero" id="dirtyChip"><i class="dot"></i><span id="dirtyText">未改动</span></div>
+    <div class="badge-ok">校验通过</div>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sb-head">资源</div>
+      <div class="tree" id="tree"></div>
+      <div class="tree-sec">模型</div>
+      <div style="padding:0 12px 6px">
+        <select id="modelSel" style="width:100%">
+          <option value="david">David · 英雄 · 1.7 万顶点</option>
+          <option value="kultiranbarracks">Kultiran 兵营 · 建筑 · 5 万顶点</option>
+          <option value="halahk">Halahk · 游戏自带 · 从 CASC 取出</option>
+        </select>
+      </div>
+      <div class="tree-sec">工具</div>
+      <div class="tree" style="padding-top:0">
+        <div class="tree-item" id="blenderBtn"><span class="ico">◆</span><span class="lbl">用 Blender 打开</span></div>
+      </div>
+    </aside>
+
+    <section class="center">
+    <div class="viewport">
+      <canvas class="vp-canvas" id="vp"></canvas>
+      <div class="vp-fallback" id="vpFallback"></div>
+
+      <div class="hud hud-tl">
+        <div class="t1" id="vpName">—</div>
+        <div class="t2" id="vpMeta"></div>
+      </div>
+      <div class="hud hud-tr">
+        <div class="seg" id="previewSeg">
+          <button data-p="solid" class="on">实体</button>
+          <button data-p="wire">线框</button>
+        </div>
+      </div>
+      <div class="hud hud-br">
+        <div class="zbar"><i id="zoomBar"></i></div><span id="zoomTxt">100%</span>
+      </div>
+    </div>
+
+    <div class="splitter" id="splitter"><i></i></div>
+
+      <div class="tablewrap" id="tablewrap">
+        <div class="tw-bar">
+          <input class="q" id="q" placeholder="搜索">
+          <div class="tabs" id="tabs"></div>
+          <div class="spacer"></div>
+          <div id="twActions"></div>
+        </div>
+        <div class="thead" id="thead"></div>
+        <div class="tbody" id="tbody"></div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <div class="insp-head">属性</div>
+      <div class="insp-body" id="insp"></div>
+    </aside>
+  </div>
+
+  <footer class="timeline">
+    <div class="tl-bar">
+      <button class="tl-play" id="playBtn" title="播放 / 暂停（空格）">▶</button>
+      <button class="tl-opt" id="loopBtn" title="循环模式">↻</button>
+      <div class="cur" id="tlCur">—</div>
+      <div class="tl-scrub" id="tlScrub">
+        <div class="tl-bands" id="tlBands"></div>
+        <i class="tl-head" id="tlHead"></i>
+      </div>
+      <div class="tl-time num" id="tlTime">0 ms</div>
+      <button class="tl-opt wide" id="autoBtn" title="切换动画后自动播放">自动播</button>
+    </div>
+    <div class="tl-track" id="tlTrack"></div>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay"><div class="dialog" id="dialog"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/three.min.js"></script>
+<script>
+/* 模型数据按目录加载：?m=david | ?m=kultiranbarracks
+   用 document.write 是因为它在解析期插入，能保证同步顺序（内联脚本随后立即可用）。 */
+(function () {
+  var slug = new URLSearchParams(location.search).get("m") || "david";
+  window.MDX_SLUG = slug;
+  ["data.js", "model.js", "textures.js"].forEach(function (f) {
+    document.write('<script src="models/' + slug + '/' + f + '"><\/script>');
+  });
+})();
+</script>
+<script>
+"use strict";
+window.__bootErr = null;
+function showFatal(msg, detail) {
+  const box = document.getElementById("vpFallback");
+  if (!box) return;
+  box.classList.add("on");
+  box.classList.remove("banner");
+  box.innerHTML = '<div class="fb-card"><b>' + msg + "</b>" +
+    (detail ? "<span>" + detail + "</span>" : "") + "</div>";
+}
+window.addEventListener("error", e => {
+  window.__bootErr = (e.message || "unknown") + " @ " + (e.filename || "") + ":" + (e.lineno || 0);
+  showFatal("3D 初始化失败", window.__bootErr);
+});
+const D = window.MDX_DATA;
+const TOTAL = Math.max(...D.sequences.map(s => s.end));
+
+/* ---------------- 状态 ---------------- */
+const S = {
+  view: "textures",
+  filter: "all",
+  query: "",
+  sel: null,            // {kind, index, layer?}
+  changes: new Map(),   // key -> {scope, label, from, to, chunk}
+  preview: "solid",
+  loopMode: "file",      // file | loop | once | pingpong
+  autoPlay: true,        // 切换动画后自动播放
+  seq: 1,
+  locks: new Set(),
+  fast: { },
+};
+
+const FILTERS = ["None","Transparent","Blend","Additive","AddAlpha","Modulate","Modulate2x"];
+const CLS_LABEL = { builtin:"内置", external:"外部", replaceable:"可替换" };
+const CLS_CLASS = { builtin:"blt", external:"ext", replaceable:"rpl" };
+
+const el = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtB = n => n > 1048576 ? (n/1048576).toFixed(2)+" MB" : (n/1024).toFixed(0)+" KB";
+const texturePath = i => (D.textures[i] && D.textures[i].path) || "";
+const textureOf = i => D.textures[i] || null;
+
+/* ---------------- 改动记录 ---------------- */
+function setChange(key, scope, label, from, to, chunk) {
+  if (String(from) === String(to)) S.changes.delete(key);
+  else S.changes.set(key, { scope, label, from, to, chunk });
+  renderStatus(); renderTable(); renderInspector(); renderTimeline();
+}
+function changedKeysFor(kind) {
+  return [...S.changes.values()].filter(c => c.scope === kind).length;
+}
+
+/* ---------------- 顶栏 ---------------- */
+function renderStatus() {
+  const n = S.changes.size;
+  const chip = el("dirtyChip"), txt = el("dirtyText");
+  chip.classList.toggle("zero", n === 0);
+  txt.textContent = n === 0 ? "未改动" : `已改 ${n} 处`;
+  el("exportBtn").disabled = false;
+  el("undoBtn").disabled = n === 0;
+}
+
+/* ---------------- 资源树 ---------------- */
+function renderTree() {
+  const items = [
+    ["textures", "贴图", "▦", D.textures.length],
+    ["materials", "材质", "◧", D.materials.length],
+    ["sequences", "序列", "▤", D.sequences.length],
+    ["attachments", "附着点", "◇", D.attachments.length],
+  ];
+  el("tree").innerHTML = items.map(([k, label, ico, n]) => {
+    const ch = changedKeysFor(k);
+    return `<div class="tree-item ${S.view===k?"on":""}" data-view="${k}">
+      <span class="ico">${ico}</span><span class="lbl">${label}</span>
+      <span class="cnt">${n}${ch?`·${ch}`:""}</span></div>`;
+  }).join("");
+  el("tree").querySelectorAll(".tree-item").forEach(node => {
+    node.onclick = () => { S.view = node.dataset.view; S.sel = null; S.filter="all"; S.query=""; el("q").value=""; renderAll(); };
+  });
+}
+
+/* ---------------- 3D 视口：three.js 真几何 + 骨骼动画 ---------------- */
+const T3 = window.THREE;
+const MD = window.MDX_MODEL;
+
+const R = {
+  renderer: null, scene: null, camera: null, group: null,
+  bones: [], skel: null, meshes: [],
+  yaw: Math.PI / 2, pitch: 0.12, dist: 260, panX: 0, panY: 0,
+  target: null, time: 0, playing: false, dir: 1, dirty: true,
+  distMin: 90, distMax: 900, dist0: 260,
+  drag: null, needResize: true,
+};
+
+/* 解码 base64 → 类型化数组 */
+function dec64(str, Type) {
+  const bin = atob(str);
+  const n = bin.length;
+  const buf = new Uint8Array(n);
+  for (let i = 0; i < n; i++) buf[i] = bin.charCodeAt(i);
+  return new Type(buf.buffer);
+}
+
+/* ---- 动画轨道预处理：按骨骼归组 ---- */
+const TRK = [];          // TRK[boneIndex] = {0:transl 1:rot 2:scale}
+if (MD) {
+  for (const t of MD.tracks) {
+    (TRK[t.b] || (TRK[t.b] = {}))[t.t] = {
+      k: dec64(t.k, Float32Array), n: t.n, s: t.s || 4,
+    };
+  }
+}
+
+function sampleLinear(k, n, stride, t, out) {
+  const last = (n - 1) * stride;
+  if (t <= k[0]) { out[0] = k[1]; out[1] = k[2]; out[2] = k[3]; return out; }
+  if (t >= k[last]) { out[0] = k[last+1]; out[1] = k[last+2]; out[2] = k[last+3]; return out; }
+  let lo = 0, hi = n - 1;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (k[mid * stride] <= t) lo = mid; else hi = mid;
+  }
+  const a = lo * stride, b = hi * stride;
+  const t0 = k[a], t1 = k[b];
+  const f = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
+  out[0] = k[a+1] + (k[b+1] - k[a+1]) * f;
+  out[1] = k[a+2] + (k[b+2] - k[a+2]) * f;
+  out[2] = k[a+3] + (k[b+3] - k[a+3]) * f;
+  return out;
+}
+
+let _qa = null, _qb = null;
+function sampleQuat(k, n, stride, t, out) {
+  const last = (n - 1) * stride;
+  if (t <= k[0]) { out.set(k[1], k[2], k[3], k[4]); return safeNorm(out); }
+  if (t >= k[last]) { out.set(k[last+1], k[last+2], k[last+3], k[last+4]); return safeNorm(out); }
+  let lo = 0, hi = n - 1;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (k[mid * stride] <= t) lo = mid; else hi = mid;
+  }
+  const a = lo * stride, b = hi * stride;
+  const t0 = k[a], t1 = k[b];
+  const f = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
+  // MDX 的 KGRT 是 (x,y,z,w)
+  _qa.set(k[a+1], k[a+2], k[a+3], k[a+4]);
+  _qb.set(k[b+1], k[b+2], k[b+3], k[b+4]);
+  return safeNorm(out.copy(_qa).slerp(_qb, f));
+}
+
+/* 数据异常（零四元数）会让矩阵塌成 0，这里退回单位四元数 */
+function safeNorm(q) {
+  const len = Math.hypot(q.x, q.y, q.z, q.w);
+  if (!(len > 1e-6)) { q.set(0, 0, 0, 1); return q; }
+  return q.normalize();
+}
+
+/* ---- 单根骨骼的局部矩阵：T(pivot+trans) · R · S · T(-pivot) ----
+   依据 Retera 的 MathUtils.fromRotationTranslationScaleOrigin（m30 = v.x+pivot.x − R·pivot）*/
+let _mRS = null, _mT1 = null, _mT2 = null, _vZero = null, _vScale = null, _q = null;
+const _tr = [0, 0, 0], _sc = [1, 1, 1];
+
+function applyBone(i, timeMs) {
+  const bone = R.bones[i];
+  const src = TRK[i];
+  _tr[0] = _tr[1] = 0; _tr[2] = 0;
+  _sc[0] = _sc[1] = _sc[2] = 1;
+  _q.set(0, 0, 0, 1);
+  if (src) {
+    if (src[0]) sampleLinear(src[0].k, src[0].n, src[0].s, timeMs, _tr);
+    if (src[1]) sampleQuat(src[1].k, src[1].n, src[1].s, timeMs, _q);
+    if (src[2]) sampleLinear(src[2].k, src[2].n, src[2].s, timeMs, _sc);
+  }
+  const pv = bone.userData.pv;
+  _mT1.makeTranslation(pv[0] + _tr[0], pv[1] + _tr[1], pv[2] + _tr[2]);
+  _vScale.set(_sc[0], _sc[1], _sc[2]);
+  _mRS.compose(_vZero, _q, _vScale);
+  _mT2.makeTranslation(-pv[0], -pv[1], -pv[2]);
+  bone.matrix.copy(_mT1).multiply(_mRS).multiply(_mT2);
+  bone.matrixAutoUpdate = false;
+}
+
+function setTime(ms) {
+  R.time = Math.max(0, Math.min(TOTAL, ms));
+  if (!R.group) return;
+  for (let i = 0; i < R.bones.length; i++) applyBone(i, R.time);
+  R.group.updateMatrixWorld(true);
+  if (R.skel) R.skel.update();
+  R.dirty = true;
+  updateTimeHud();
+}
+
+function updateTimeHud() {
+  const t = Math.round(R.time);
+  el("tlTime").textContent = t.toLocaleString() + " ms";
+  const head = el("tlHead");
+  if (head) head.style.left = (t / TOTAL * 100).toFixed(3) + "%";
+  const seq = D.sequences[S.seq];
+  el("playBtn").textContent = R.playing ? "❚❚" : "▶";
+  if (seq) el("playBtn").title = (R.playing ? "暂停" : "播放") + " " + seq.name + "（空格）";
+
+  const m = modeOf(seq);
+  const icon = m === "once" ? "→" : m === "pingpong" ? "⇄" : "↻";
+  const lb = el("loopBtn");
+  if (lb) {
+    lb.textContent = icon;
+    lb.title = "循环：跟随文件 / 循环 / 单次 / 往返（点一下切换）";
+    lb.classList.toggle("on", m !== "once");
+  }
+  const ab = el("autoBtn");
+  if (ab) ab.classList.toggle("on", S.autoPlay);
+}
+
+/* 贴图按需异步加载。同一张只请求一次，多个材质共享同一个 Texture。
+   加载失败（例如用 file:// 打开时浏览器禁止把本地图片送进 WebGL）不报错，
+   材质保持平均色——看起来是"低模"，而不是一片白。 */
+const MODEL_BASE = "models/" + (window.MDX_SLUG || "david") + "/";
+const TEXCACHE = {};
+const TEXSTAT = { ok: 0, fail: 0, blocked: 0 };
+let fileModeWarned = false;
+
+function warnFileMode() {
+  if (fileModeWarned) return;
+  fileModeWarned = true;
+  showFatal("本地文件模式：贴图不可用",
+    "浏览器禁止 file:// 页面读取本地图片。模型与动画正常，贴图用平均色代替。\n" +
+    "在 prototype 目录执行 python -m http.server 后访问即可看到完整贴图。");
+  el("vpFallback").classList.add("banner");
+  setTimeout(() => {
+    const b = el("vpFallback");
+    if (b) b.classList.remove("on");
+  }, 8000);
+}
+
+function loadTexture(idx, cb) {
+  const e = (window.MDX_TEX && window.MDX_TEX.entries[idx]) || null;
+  if (!e) { if (cb) cb(null); return; }
+
+  const hit = TEXCACHE[idx];
+  if (hit) {
+    if (hit.ok) { if (cb) cb(hit.tex); }
+    else if (hit.waiting) hit.waiting.push(cb);
+    return;
+  }
+
+  /* file:// 下 WebGL 一定拒绝本地图片（SecurityError），直接降级，别发请求 */
+  if (location.protocol === "file:") {
+    TEXCACHE[idx] = { tex: null, ok: false };
+    TEXSTAT.blocked++;
+    if (cb) cb(null);
+    updateTexHud();
+    warnFileMode();
+    return;
+  }
+
+  const slot = { tex: null, ok: false, waiting: cb ? [cb] : [] };
+  TEXCACHE[idx] = slot;
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";       // 跨域图床没有 CORS 头时能提前失败，而不是等到上传时炸
+  img.onload = () => {
+    const tex = new T3.Texture(img);
+    tex.flipY = false;                  // WC3 的 UV 原点在左上
+    tex.anisotropy = 4;
+    if ("sRGBEncoding" in T3) tex.encoding = T3.sRGBEncoding;
+    tex.needsUpdate = true;
+    slot.tex = tex;
+    slot.ok = true;
+    TEXSTAT.ok++;
+    slot.waiting.forEach(f => f(tex));
+    slot.waiting = [];
+    R.dirty = true;
+    updateTexHud();
+  };
+  img.onerror = () => {
+    slot.ok = false;
+    TEXSTAT.fail++;
+    slot.waiting.forEach(f => f(null));
+    slot.waiting = [];
+    updateTexHud();
+    if (TEXSTAT.fail === 1) {
+      showFatal("部分贴图未加载",
+        "对应部位用该贴图的平均色代替。检查 tex/ 下的文件是否存在，或用 start.bat 以本地服务打开。");
+      setTimeout(() => el("vpFallback").classList.remove("on"), 6000);
+    }
+  };
+  img.src = MODEL_BASE + window.MDX_TEX.dir + e.file;
+}
+
+/* FilterMode → three 混合状态。映射依据 Retera 的 PerspectiveViewport.bindLayer()。
+   None(0) 关混合；Transparent(1) 用 alpha 测试 0.75；其余是各种 blend 因子组合。 */
+function applyFilter(mat, filter, alpha) {
+  mat.transparent = false;
+  mat.alphaTest = 0;
+  if (filter === "Transparent") {
+    mat.alphaTest = 0.75;
+  } else if (filter === "Blend") {
+    mat.transparent = true;
+    mat.blending = T3.NormalBlending;
+  } else if (filter === "Additive" || filter === "AddAlpha") {
+    mat.transparent = true;
+    mat.blending = T3.CustomBlending;
+    mat.blendSrc = T3.SrcAlphaFactor;
+    mat.blendDst = T3.OneFactor;
+    mat.blendEquation = T3.AddEquation;
+  } else if (filter === "Modulate") {
+    mat.transparent = true;
+    mat.blending = T3.CustomBlending;
+    mat.blendSrc = T3.ZeroFactor;
+    mat.blendDst = T3.SrcColorFactor;
+    mat.blendEquation = T3.AddEquation;
+  } else if (filter === "Modulate2x") {
+    mat.transparent = true;
+    mat.blending = T3.CustomBlending;
+    mat.blendSrc = T3.DstColorFactor;
+    mat.blendDst = T3.SrcColorFactor;
+    mat.blendEquation = T3.AddEquation;
+  }
+  mat.depthWrite = !mat.transparent;
+  if (alpha < 0.999) { mat.opacity = alpha; mat.transparent = true; }
+  mat.needsUpdate = true;
+}
+
+function initTemps() {
+  _qa = new T3.Quaternion(); _qb = new T3.Quaternion();
+  _mRS = new T3.Matrix4(); _mT1 = new T3.Matrix4(); _mT2 = new T3.Matrix4();
+  _vZero = new T3.Vector3(0, 0, 0); _vScale = new T3.Vector3(1, 1, 1);
+  _q = new T3.Quaternion();
+}
+
+function buildScene() {
+  initTemps();
+  const canvas = el("vp");
+  R.renderer = new T3.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  R.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  if ("sRGBEncoding" in T3) R.renderer.outputEncoding = T3.sRGBEncoding;
+  R.scene = new T3.Scene();
+  R.camera = new T3.PerspectiveCamera(40, 1, 0.5, 3000);
+  R.camera.up.set(0, 0, 1);          // WC3 是 Z-up
+  R.target = new T3.Vector3(0, 0, 55);
+  frameModel();
+
+  R.scene.add(new T3.AmbientLight(0xffffff, 0.62));
+  const key = new T3.DirectionalLight(0xffffff, 0.82);
+  key.position.set(0.7, -0.9, 1.4);
+  R.scene.add(key);
+  const fill = new T3.DirectionalLight(0xa8c6e0, 0.42);
+  fill.position.set(-1.2, 0.9, 0.4);
+  R.scene.add(fill);
+  const rim = new T3.DirectionalLight(0x9fb8cc, 0.30);
+  rim.position.set(0, 0.6, -1.2);
+  R.scene.add(rim);
+
+  /* 骨骼层级 */
+  const bones = [];
+  for (const b of MD.bones) {
+    const bone = new T3.Bone();
+    bone.name = b.n;
+    bone.userData.pv = b.pv;
+    bones[b.id] = bone;
+  }
+  const root = new T3.Object3D();
+  root.matrixAutoUpdate = false;
+  for (const b of MD.bones) {
+    if (b.p >= 0 && bones[b.p]) bones[b.p].add(bones[b.id]);
+    else root.add(bones[b.id]);
+  }
+  R.bones = bones;
+
+  /* 建 Skeleton 之前必须处于 bind pose：局部矩阵 = T(pv)·I·T(−pv) = I。
+     否则 Skeleton 会把"动画第一帧"当成绑定姿态，蒙皮整体错位。 */
+  for (const b of bones) {
+    if (!b) continue;
+    b.matrix.identity();
+    b.matrixAutoUpdate = false;
+  }
+  root.updateMatrixWorld(true);
+  R.skel = new T3.Skeleton(bones);
+
+  /* 关键：这个 group 必须是 identity。
+     骨骼与 mesh 同在这一层，父级变换会被算两次——
+     皮肤管线是 view·meshWorld·bindInv·boneWorld·bind·pos，
+     而 boneWorld 里已经含 group 变换。之前在这里加 0.01 缩放，
+     等于缩放平方（1e-4），模型只有一厘米大，肉眼就是"没有模型"。
+     Z-up 交给相机（camera.up = +Z）处理。 */
+  R.group = new T3.Group();
+  R.group.matrixAutoUpdate = false;
+  R.group.matrix.identity();
+  R.group.add(root);
+
+  /* 每个 geoset 一个 SkinnedMesh，共用同一套骨骼 */
+  for (const g of MD.geosets) {
+    const geo = new T3.BufferGeometry();
+    geo.setAttribute("position", new T3.BufferAttribute(dec64(g.pos, Float32Array), 3));
+    geo.setAttribute("normal", new T3.BufferAttribute(dec64(g.nrm, Float32Array), 3));
+    geo.setAttribute("uv", new T3.BufferAttribute(dec64(g.uv, Float32Array), 2));
+    geo.setAttribute("skinIndex", new T3.Uint16BufferAttribute(dec64(g.jnt, Uint16Array), 4));
+    geo.setAttribute("skinWeight", new T3.BufferAttribute(dec64(g.wgt, Float32Array), 4));
+    geo.setIndex(new T3.BufferAttribute(dec64(g.idx, Uint16Array), 1));
+    geo.computeBoundingSphere();
+
+    /* 找这个 geoset 的漫反射贴图：优先 HD 合并槽，退回历史 textureId */
+    const mdef = D.materials[g.mat];
+    const lay = mdef && mdef.layers && mdef.layers[0];
+    const tid = lay
+      ? (lay.hd && lay.hd.Diffuse !== undefined ? lay.hd.Diffuse : lay.textureId)
+      : -1;
+    const info = window.MDX_TEX && window.MDX_TEX.entries[tid];
+
+    /* Lambert 不支持 normalMap，改用 Phong 并把高光压到 0，视觉上等价于 Lambert */
+    const mat = new T3.MeshPhongMaterial({
+      color: info ? 0xffffff : new T3.Color(g.col),
+      side: T3.DoubleSide,
+      shininess: 2,
+      specular: 0x000000,
+    });
+    if (info) {
+      /* 加载完成前用这张贴图的平均色，避免白花花的塑料感 */
+      if (info.avg) {
+        mat.color.setRGB(info.avg[0] / 255, info.avg[1] / 255, info.avg[2] / 255);
+      }
+      loadTexture(tid, tex => {
+        if (!tex) return;
+        mat.map = tex;
+        mat.color.setHex(0xffffff);
+        mat.needsUpdate = true;
+        R.dirty = true;
+      });
+      applyFilter(mat, (lay && lay.filter) || "None", (lay && lay.alpha) || 1);
+
+      /* 法线贴图：HD 合并槽里的 Normal。ATI2/BC5 解码后 R,G 就是切线空间 xy */
+      const nid = lay && lay.hd ? lay.hd.Normal : undefined;
+      if (nid !== undefined && nid >= 0) {
+        loadTexture(nid, tex => {
+          if (!tex) return;
+          tex.encoding = T3.LinearEncoding;   // 法线数据不能做 sRGB 转换
+          tex.needsUpdate = true;
+          mat.normalMap = tex;
+          mat.normalScale.set(1, 1);
+          mat.needsUpdate = true;
+          R.dirty = true;
+        });
+      }
+    }
+    const mesh = new T3.SkinnedMesh(geo, mat);
+    mesh.bind(R.skel, new T3.Matrix4());
+    /* detached：bindMatrixInverse 由 bindMatrix 求逆（identity），
+       不受 group 的 0.01 缩放干扰 */
+    mesh.bindMode = "detached";
+    mesh.frustumCulled = false;
+    mesh.userData = { geoset: g.i, mat: g.mat, tris: g.nt, verts: g.nv };
+    R.meshes.push(mesh);
+    R.group.add(mesh);
+  }
+
+  R.scene.add(R.group);
+  R.group.updateMatrixWorld(true);
+  buildParticles();
+  setTime(D.sequences[1] ? D.sequences[1].start : 0);
+}
+
+/* 按模型包围盒定相机：建筑和英雄尺寸差三倍，硬编码一定取不全 */
+function frameModel() {
+  const b = MD && MD.bounds;
+  if (!b) return;
+  const cx = (b.min[0] + b.max[0]) / 2;
+  const cy = (b.min[1] + b.max[1]) / 2;
+  const cz = (b.min[2] + b.max[2]) / 2;
+  const size = Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]);
+  if (!isFinite(size) || size <= 0 || size > 1e6) {
+    /* 纯粒子模型没有几何，包围盒是空的 */
+    R.target.set(0, 0, 80);
+    R.dist0 = 420; R.dist = R.dist0;
+    R.distMin = 120; R.distMax = 1800;
+    R.camera.near = 0.5; R.camera.far = 4000;
+    R.camera.updateProjectionMatrix();
+    return;
+  }
+  R.target.set(cx, cy, cz);
+  R.dist0 = Math.max(20, size * 1.9);
+  R.dist = R.dist0;
+  R.distMin = R.dist0 * 0.28;
+  R.distMax = R.dist0 * 4.5;
+  R.camera.near = Math.max(0.1, R.dist0 / 600);
+  R.camera.far = R.dist0 * 40;
+  R.camera.updateProjectionMatrix();
+}
+
+/* ---------------- 粒子（PRE2） ---------------- */
+const PARTS = [];
+let SPRITE = null;
+
+/* 粒子贴图常是 rows×cols 的翻页纹理（一张图里排着多帧）。
+   Points 没办法逐粒子改 UV，所以裁出第一帧单独用——至少不会显示成网格。 */
+function cropFrame(tex, rows, cols) {
+  const img = tex.image;
+  if (!img || !img.width) return tex;
+  if (rows <= 1 && cols <= 1) return tex;
+  const w = Math.floor(img.width / cols), h = Math.floor(img.height / rows);
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  c.getContext("2d").drawImage(img, 0, 0, w, h, 0, 0, w, h);
+  const t = new T3.CanvasTexture(c);
+  if ("sRGBEncoding" in T3) t.encoding = T3.sRGBEncoding;
+  return t;
+}
+
+/* 贴图缺失时的柔光圆点，避免粒子显示成方块 */
+function particleSprite() {
+  if (SPRITE) return SPRITE;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, "rgba(255,255,255,1)");
+  grd.addColorStop(0.45, "rgba(255,255,255,0.55)");
+  grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  SPRITE = new T3.CanvasTexture(c);
+  return SPRITE;
+}
+
+function spawnParticle(sys, i) {
+  const p = sys.def;
+  const st = sys.st;
+  const o = i * 7;
+  const src = p.obj >= 0 && MD.pivots && MD.pivots[p.obj] ? MD.pivots[p.obj].xyz : [0, 0, 80];
+  st[o] = src[0];
+  st[o + 1] = src[1];
+  st[o + 2] = src[2];
+  const sp = p.speed * (1 - (p.var || 0) / 2 + Math.random() * (p.var || 0));
+  const theta = Math.random() * Math.PI * 2;
+  const maxPhi = Math.max(0.05, (p.lat || 0) / 180 * Math.PI);
+  const phi = Math.random() * maxPhi;
+  st[o + 3] = sp * Math.sin(phi) * Math.cos(theta);
+  st[o + 4] = sp * Math.sin(phi) * Math.sin(theta);
+  st[o + 5] = sp * Math.cos(phi);
+  st[o + 6] = 0;
+}
+
+function buildParticles() {
+  if (!MD.particles || !MD.particles.length) return;
+  for (const p of MD.particles) {
+    const n = Math.max(16, Math.min(600, Math.ceil(p.rate * p.life)));
+    const posArr = new Float32Array(n * 3);
+    const colArr = new Float32Array(n * 3);
+    const geo = new T3.BufferGeometry();
+    geo.setAttribute("position", new T3.BufferAttribute(posArr, 3));
+    geo.setAttribute("color", new T3.BufferAttribute(colArr, 3));
+    geo.boundingSphere = new T3.Sphere(new T3.Vector3(0, 0, 80), 2000);
+
+    const mat = new T3.PointsMaterial({
+      size: Math.max(4, p.wid || 30),
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      sizeAttenuation: true,
+      blending: p.filt === 1 ? T3.NormalBlending : T3.AdditiveBlending,
+    });
+    mat.map = particleSprite();          // 先用柔光圆点，贴图到了再换
+    /* 先建材质再挂贴图：loadTexture 命中缓存时会同步回调 */
+    if (p.tex >= 0) {
+      loadTexture(p.tex, t => {
+        if (!t) return;
+        mat.map = cropFrame(t, p.rows || 1, p.cols || 1);
+        mat.needsUpdate = true;
+        R.dirty = true;
+      });
+    }
+    const pts = new T3.Points(geo, mat);
+    pts.frustumCulled = false;
+    R.group.add(pts);
+
+    const st = new Float32Array(n * 7);
+    const sys = { def: p, pts, geo, pos: posArr, col: colArr, st, n };
+    for (let i = 0; i < n; i++) {
+      spawnParticle(sys, i);
+      st[i * 7 + 6] = Math.random() * p.life;   // 错开年龄，避免一开场全部同时出生
+    }
+    PARTS.push(sys);
+  }
+}
+
+function updateParticles(dt) {
+  if (!PARTS.length) return;
+  for (const sys of PARTS) {
+    const p = sys.def, st = sys.st, pos = sys.pos, col = sys.col, n = sys.n;
+    const c0 = p.col[0], c1 = p.col[1], c2 = p.col[2];
+    for (let i = 0; i < n; i++) {
+      const o = i * 7;
+      st[o + 6] += dt;
+      if (st[o + 6] >= p.life) spawnParticle(sys, i);
+      st[o] += st[o + 3] * dt;
+      st[o + 1] += st[o + 4] * dt;
+      st[o + 2] += st[o + 5] * dt;
+      if (p.grav) st[o + 5] -= p.grav * dt;
+
+      const t = Math.min(1, st[o + 6] / p.life);
+      const a = t < 0.5 ? c0 : c1, b = t < 0.5 ? c1 : c2;
+      const f = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+      const al = p.alpha[0] + (p.alpha[2] - p.alpha[0]) * t;
+      pos[i * 3] = st[o];
+      pos[i * 3 + 1] = st[o + 1];
+      pos[i * 3 + 2] = st[o + 2];
+      col[i * 3] = (a[0] + (b[0] - a[0]) * f) * al;
+      col[i * 3 + 1] = (a[1] + (b[1] - a[1]) * f) * al;
+      col[i * 3 + 2] = (a[2] + (b[2] - a[2]) * f) * al;
+    }
+    sys.geo.attributes.position.needsUpdate = true;
+    sys.geo.attributes.color.needsUpdate = true;
+  }
+  R.dirty = true;
+}
+
+function updateCamera() {
+  if (!R.camera) return;
+  const cp = Math.cos(R.pitch), sp = Math.sin(R.pitch);
+  R.camera.position.set(
+    R.target.x + Math.sin(R.yaw) * cp * R.dist + R.panX,
+    R.target.y + Math.cos(R.yaw) * cp * R.dist + R.panY,
+    R.target.z + sp * R.dist
+  );
+  R.camera.lookAt(R.target);
+  R.camera.updateMatrixWorld();
+}
+
+function resizeVP() {
+  if (!R.renderer) return;
+  const cv = el("vp");
+  const rect = cv.getBoundingClientRect();
+  const w = Math.max(1, rect.width), h = Math.max(1, rect.height);
+  R.renderer.setSize(w, h, false);
+  R.camera.aspect = w / h;
+  R.camera.updateProjectionMatrix();
+  R.dirty = true;
+}
+
+let lastFrame = 0;
+const LOOP_LABEL = { file: "跟随文件", loop: "循环", once: "单次", pingpong: "往返" };
+
+/* 当前序列实际使用的循环方式：file 模式直接照 SEQS 里的 non_looping 标记 */
+function modeOf(seq) {
+  if (!seq) return "once";
+  if (S.loopMode !== "file") return S.loopMode;
+  return seq.loop ? "loop" : "once";
+}
+
+/* 推进一帧。纯函数，边界情况可单独测。 */
+function advance(t, dt, seq, mode, dir) {
+  const start = seq.start, end = seq.end;
+  const dur = Math.max(1, end - start);
+  let nt = t + dt * dir;
+  let nd = dir, stop = false;
+  if (mode === "pingpong") {
+    if (nt > end) { nt = end - (nt - end); nd = -1; }
+    else if (nt < start) { nt = start + (start - nt); nd = 1; }
+    nt = Math.max(start, Math.min(end, nt));
+  } else if (nt > end) {
+    if (mode === "loop") nt = start + ((nt - end) % dur);
+    else { nt = end; stop = true; }
+  } else if (nt < start) {
+    nt = start;
+  }
+  return { t: nt, dir: nd, stop: stop };
+}
+
+function frame(now) {
+  const dt = lastFrame ? Math.min(80, now - lastFrame) : 0;
+  lastFrame = now;
+  if (PARTS.length) updateParticles(Math.min(0.05, dt / 1000));
+  if (R.playing) {
+    const seq = D.sequences[S.seq] || D.sequences[0];
+    if (!seq) {
+      R.playing = false;
+      updateTimeHud();
+    } else {
+      const r = advance(R.time, dt, seq, modeOf(seq), R.dir || 1);
+      R.dir = r.dir;
+      if (r.stop) { R.playing = false; updateTimeHud(); }
+      setTime(r.t);
+    }
+  }
+  if (R.dirty) {
+    try {
+      R.renderer.render(R.scene, R.camera);
+    } catch (err) {
+      /* 渲染一旦抛异常必须掐掉当前脏标记并继续排下一帧，
+         否则 requestAnimationFrame 断掉，画面会永久冻住 */
+      if (!R.renderErr) {
+        R.renderErr = String((err && err.message) || err);
+        showFatal("渲染出错", R.renderErr);
+        if (window.console) console.error(err);
+      }
+    }
+    R.dirty = false;
+  }
+  requestAnimationFrame(frame);
+}
+
+function initViewport() {
+  if (!T3 || !MD) { el("vpName").textContent = "几何数据未加载"; return; }
+  buildScene();
+  resizeVP();
+  updateCamera();
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => resizeVP()).observe(el("vp").parentElement);
+  } else {
+    window.addEventListener("resize", resizeVP);
+  }
+
+  const cv = el("vp");
+  cv.addEventListener("mousedown", e => {
+    R.drag = { btn: e.button, x: e.clientX, y: e.clientY };
+    e.preventDefault();
+  });
+  cv.addEventListener("contextmenu", e => e.preventDefault());
+  cv.addEventListener("wheel", e => {
+    e.preventDefault();
+    R.dist = Math.max(R.distMin, Math.min(R.distMax, R.dist * (1 + e.deltaY * 0.0012)));
+    updateZoomHud(); updateCamera(); R.dirty = true;
+  }, { passive: false });
+  cv.addEventListener("dblclick", () => resetCamera());
+  window.addEventListener("mousemove", e => {
+    if (!R.drag) return;
+    const dx = e.clientX - R.drag.x, dy = e.clientY - R.drag.y;
+    R.drag.x = e.clientX; R.drag.y = e.clientY;
+    if (R.drag.btn === 0) {
+      R.yaw -= dx * 0.0075;
+      R.pitch = Math.max(-1.35, Math.min(1.35, R.pitch + dy * 0.0075));
+    } else {
+      R.panX += dx * 0.0013 * R.dist;
+      R.panY -= dy * 0.0013 * R.dist;
+    }
+    updateCamera(); R.dirty = true;
+  });
+  window.addEventListener("mouseup", () => { R.drag = null; });
+
+  el("previewSeg").querySelectorAll("button").forEach(b => {
+    b.onclick = () => {
+      S.preview = b.dataset.p;
+      el("previewSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+      renderViewport();
+    };
+  });
+
+  /* 时间轴拖动条 */
+  const scrub = el("tlScrub");
+  let scrubbing = false;
+  const seek = e => {
+    const r = scrub.getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / Math.max(1, r.width)));
+    R.playing = false;
+    setTime(f * TOTAL);
+    const seq = D.sequences.find(s => R.time >= s.start && R.time <= s.end);
+    if (seq) S.seq = seq.i;
+    renderTimeline();
+  };
+  scrub.addEventListener("mousedown", e => { scrubbing = true; seek(e); e.preventDefault(); });
+  window.addEventListener("mousemove", e => { if (scrubbing) seek(e); });
+  window.addEventListener("mouseup", () => { scrubbing = false; });
+
+  el("playBtn").onclick = () => togglePlay();
+
+  el("loopBtn").onclick = () => {
+    const order = ["file", "loop", "once", "pingpong"];
+    S.loopMode = order[(order.indexOf(S.loopMode) + 1) % order.length];
+    updateTimeHud();
+    toast("循环：" + LOOP_LABEL[S.loopMode]);
+  };
+
+  el("autoBtn").onclick = () => {
+    S.autoPlay = !S.autoPlay;
+    updateTimeHud();
+    toast(S.autoPlay ? "切换动画后会自动播放" : "切换动画后不自动播放");
+  };
+
+  updateZoomHud();
+  requestAnimationFrame(frame);
+}
+
+function togglePlay(force) {
+  if (!R.group) return;
+  const want = force === undefined ? !R.playing : !!force;
+  if (want === R.playing) { updateTimeHud(); return; }
+  if (want) {
+    const seq = D.sequences[S.seq];
+    if (seq && (R.time < seq.start || R.time > seq.end - 1)) {
+      R.time = seq.start;
+      setTime(R.time);
+    }
+    R.dir = 1;
+    R.playing = true;
+  } else {
+    R.playing = false;
+  }
+  updateTimeHud();
+}
+
+function resetCamera() {
+  R.yaw = Math.PI / 2; R.pitch = 0.12; R.dist = R.dist0 || 260; R.panX = 0; R.panY = 0;
+  updateZoomHud(); updateCamera(); R.dirty = true;
+}
+
+function updateZoomHud() {
+  const pct = Math.round(((R.dist0 || 260) / R.dist) * 100);
+  el("zoomTxt").textContent = pct + "%";
+  const bar = el("zoomBar");
+  if (bar) bar.style.width = Math.max(6, Math.min(100, pct * 0.62)) + "%";
+}
+
+function texHudText() {
+  const total = window.MDX_TEX
+    ? Object.values(window.MDX_TEX.entries).filter(e => e.used).length : 0;
+  if (TEXSTAT.blocked) return "贴图不可用";
+  if (TEXSTAT.ok === 0 && TEXSTAT.fail === 0) return "贴图加载中";
+  /* ok 是"真正挂到材质上"的张数，不是"成功加载"的张数：
+     Normal/ORM/Emissive 只进面板、不进 3D，所以 45/87 不等于 42 张失败。 */
+  return `贴图 ${TEXSTAT.ok} 张在用 · 共 ${total} 条`;
+}
+
+function updateTexHud() {
+  if (!MD) return;
+  const h = el("vpMeta");
+  if (!h) return;
+  const st = MD.stats;
+  h.textContent =
+    `${st.verts.toLocaleString()} 顶点 · ${st.tris.toLocaleString()} 三角 · ` +
+    `${st.bones} 骨骼 · ${texHudText()}`;
+}
+
+function renderViewport() {
+  const wire = S.preview === "wire";
+  const st = MD ? MD.stats : { verts: 0, tris: 0, bones: 0 };
+  if (MD) el("vpName").textContent = MD.file;
+  if (MD) {
+    el("vpMeta").textContent =
+      `${st.verts.toLocaleString()} 顶点 · ${st.tris.toLocaleString()} 三角 · ` +
+      `${st.bones} 骨骼 · ${texHudText()}`;
+  }
+  for (const m of R.meshes) m.material.wireframe = wire;
+  R.dirty = true;
+}
+
+/* 贴图缩略图。没导出成功就显示虚线占位——一眼能看出"这张贴图缺了"。
+   注意：<img> 在 file:// 下也能正常显示，只有上传到 WebGL 才受限。 */
+function texThumb(idx) {
+  const e = window.MDX_TEX && window.MDX_TEX.entries[idx];
+  if (!e) return '<div class="thumb-none">无</div>';
+  return `<img class="thumb" loading="lazy" src="${MODEL_BASE}${window.MDX_TEX.dir}${e.file}" alt="">`;
+}
+
+function texBig(idx) {
+  const e = window.MDX_TEX && window.MDX_TEX.entries[idx];
+  if (!e) return '<div class="tex-big-none">该贴图未能找到（本地与游戏数据都没有）</div>';
+  return `<img class="tex-big" src="${MODEL_BASE}${window.MDX_TEX.dir}${e.file}" alt="">`;
+}
+
+/* ---------------- 表：贴图 ---------------- */
+function texRows() {
+  return D.textures.filter(t => {
+    if (S.filter !== "all" && t.cls !== S.filter) return false;
+    if (S.query && !t.path.toLowerCase().includes(S.query.toLowerCase())) return false;
+    return true;
+  });
+}
+function matRows() {
+  return D.materials.filter(m => {
+    if (!S.query) return true;
+    return m.layers.some(l => (texturePath(l.textureId) + " " + l.filter).toLowerCase().includes(S.query.toLowerCase()));
+  });
+}
+function seqRows() {
+  return D.sequences.filter(s => !S.query || s.name.toLowerCase().includes(S.query.toLowerCase()));
+}
+function atcRows() {
+  return D.attachments.filter(a => !S.query ||
+    (a.name + " " + a.parentName + " " + a.mount).toLowerCase().includes(S.query.toLowerCase()));
+}
+
+function renderTable() {
+  const isTex = S.view === "textures";
+
+  const tabsBox = el("tabs");
+  if (isTex) {
+    const counts = { all: D.textures.length, external: 0, builtin: 0, replaceable: 0 };
+    D.textures.forEach(t => counts[t.cls]++);
+    tabsBox.innerHTML = [["all","全部"],["external","外部"],["builtin","内置"],["replaceable","可替换"]]
+      .map(([k, l]) => `<button data-f="${k}" class="${S.filter===k?"on":""}">${l}<span class="n">${counts[k]}</span></button>`).join("");
+    tabsBox.querySelectorAll("button").forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderTable(); });
+    el("twActions").innerHTML = `<button class="btn sm accent" id="bulkBtn">一键改外部路径</button>`;
+    el("bulkBtn").onclick = openBulk;
+  } else {
+    tabsBox.innerHTML = "";
+    el("twActions").innerHTML = S.view === "attachments"
+      ? `<button class="btn sm accent" id="mountBtn">挂载武器</button><button class="btn sm" id="addBtn">新增附着点</button>`
+      : "";
+    if (el("mountBtn")) {
+      el("mountBtn").onclick = () => { if (S.sel && S.sel.kind === "attachments") openMount(S.sel.index); };
+      el("addBtn").onclick = () => toast("原型未实现：新增附着点");
+    }
+  }
+
+  const head = el("thead"), body = el("tbody");
+  if (isTex) {
+    head.className = "thead grid-tex";
+    head.innerHTML = `<div>#</div><div></div><div>路径</div><div>类型</div><div></div>`;
+    const rows = texRows();
+    body.innerHTML = rows.map(t => {
+      const key = `tex:${t.index}:path`;
+      const st = S.changes.get(key);
+      const locked = S.locks.has(t.index);
+      return `<div class="trow grid-tex ${S.sel&&S.sel.kind==="textures"&&S.sel.index===t.index?"on":""} ${st?"changed":""}"
+        data-i="${t.index}">
+        <div class="cell-dim num">${t.index}</div>
+        <div>${texThumb(t.index)}</div>
+        <div class="cell-path" title="${esc(t.path)}">${esc(st ? st.to : t.path)}</div>
+        <div><span class="lb ${CLS_CLASS[t.cls]}">${CLS_LABEL[t.cls]}</span></div>
+        <div><span class="lockbtn ${locked?"on":""}" data-lock="${t.index}">${locked?"■":"□"}</span></div>
+      </div>`;
+    }).join("");
+    body.querySelectorAll(".trow").forEach(r => {
+      r.onclick = e => {
+        if (e.target.dataset.lock !== undefined) {
+          const i = +e.target.dataset.lock;
+          if (S.locks.has(i)) S.locks.delete(i); else S.locks.add(i);
+          renderTable(); return;
+        }
+        S.sel = { kind:"textures", index:+r.dataset.i }; renderAll();
+      };
+    });
+  } else if (S.view === "materials") {
+    head.className = "thead grid-mat";
+    head.innerHTML = `<div>#</div><div>图层</div><div>FilterMode</div><div>Alpha</div>`;
+    const rows = matRows();
+    body.innerHTML = rows.map(m => m.layers.map(l => {
+      const key = `mat:${m.index}:${l.index}`;
+      const st = S.changes.get(key);
+      const sel = S.sel && S.sel.kind === "materials" && S.sel.index === m.index && S.sel.layer === l.index;
+      const diff = st ? st.to.split("|") : null;
+      return `<div class="trow grid-mat ${sel?"on":""} ${st?"changed":""}" data-m="${m.index}" data-l="${l.index}">
+        <div class="cell-dim num">${m.index}</div>
+        <div class="cell-path">层 ${l.index} · ${esc((textureOf(l.textureId)||{}).file || "无贴图")}</div>
+        <div class="${diff?"":""}" style="${diff?"color:#8fd08a":""}">${esc(diff ? diff[0] : l.filter)}</div>
+        <div class="num" style="${diff?"color:#8fd08a":""}">${(st ? parseFloat(diff[1]) : l.alpha).toFixed(2)}</div>
+      </div>`;
+    }).join("")).join("");
+    body.querySelectorAll(".trow").forEach(r => {
+      r.onclick = () => { S.sel = { kind:"materials", index:+r.dataset.m, layer:+r.dataset.l }; renderAll(); };
+    });
+  } else if (S.view === "sequences") {
+    head.className = "thead grid-seq";
+    head.innerHTML = `<div>#</div><div>名称</div><div>起 (ms)</div><div>止 (ms)</div><div>时长</div><div>循环</div>`;
+    const rows = seqRows();
+    body.innerHTML = rows.map(s => {
+      const key = `seq:${s.index}`;
+      const st = S.changes.get(key);
+      const v = st ? st.to.split("|") : [s.start, s.end, s.loop ? "1" : "0"];
+      return `<div class="trow grid-seq ${S.sel&&S.sel.kind==="sequences"&&S.sel.index===s.index?"on":""} ${st?"changed":""}"
+        data-i="${s.index}">
+        <div class="cell-dim num">${s.index}</div>
+        <div class="cell-path">${esc(s.name)}</div>
+        <div class="num ${st?"":""}" style="${st?"color:#8fd08a":""}">${v[0]}</div>
+        <div class="num" style="${st?"color:#8fd08a":""}">${v[1]}</div>
+        <div class="cell-dim num">${(+v[1] - +v[0]).toLocaleString()}</div>
+        <div class="cell-dim">${v[2] === "1" ? "循环" : "单次"}</div>
+      </div>`;
+    }).join("");
+    body.querySelectorAll(".trow").forEach(r => {
+      r.onclick = () => { S.sel = { kind:"sequences", index:+r.dataset.i }; S.seq = +r.dataset.i; renderAll(); };
+    });
+  } else {
+    head.className = "thead grid-atc";
+    head.innerHTML = `<div>#</div><div>名称</div><div>父节点</div><div>编号</div><div>挂载模型</div>`;
+    const rows = atcRows();
+    body.innerHTML = rows.map(a => {
+      const key = `atc:${a.index}:mount`;
+      const st = S.changes.get(key);
+      return `<div class="trow grid-atc ${S.sel&&S.sel.kind==="attachments"&&S.sel.index===a.index?"on":""} ${st?"changed":""}"
+        data-i="${a.index}">
+        <div class="cell-dim num">${a.index}</div>
+        <div class="cell-path">${esc(a.name)}</div>
+        <div class="cell-dim cell-path">${esc(a.parentName)}</div>
+        <div class="cell-dim num">${a.objectId}</div>
+        <div class="cell-path ${st?"":""}" style="${st?"color:#8fd08a":""}">${esc(st ? st.to : (a.mount || "—"))}</div>
+      </div>`;
+    }).join("");
+    body.querySelectorAll(".trow").forEach(r => {
+      r.onclick = () => { S.sel = { kind:"attachments", index:+r.dataset.i }; renderAll(); };
+    });
+  }
+}
+
+/* ---------------- 属性面板 ---------------- */
+function renderInspector() {
+  const box = el("insp");
+  if (!S.sel) {
+    box.innerHTML = `<div class="empty">未选中</div>
+      <div class="divider"></div>
+      <div class="kv"><span class="k">文件</span><span class="v">${esc(D.model.file)}</span></div>
+      <div class="kv"><span class="k">大小</span><span class="v num">${fmtB(D.model.bytes)}</span></div>
+      <div class="kv"><span class="k">格式版本</span><span class="v num">${D.model.version}</span></div>
+      <div class="kv"><span class="k">骨骼 / 关键帧</span><span class="v num">${D.model.bones} / ${D.model.keys.toLocaleString()}</span></div>
+      <div class="divider"></div>
+      <div class="kv"><span class="k">Chunk</span><span class="v">${D.model.chunks.length} 个</span></div>
+      <div class="chips">${D.model.chunks.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
+    return;
+  }
+
+  if (S.sel.kind === "textures") {
+    const t = D.textures[S.sel.index];
+    if (!t) { box.innerHTML = '<div class="empty">未选中</div>'; return; }
+    const key = `tex:${t.index}:path`;
+    const st = S.changes.get(key);
+    const cur = st ? st.to : t.path;
+    const refs = D.materials.flatMap(m => m.layers).filter(l =>
+      l.textureId === t.index || Object.values(l.hd).includes(t.index)).length;
+    box.innerHTML = `
+      ${texBig(t.index)}
+      ${window.MDX_TEX && window.MDX_TEX.entries[t.index]
+        ? `<div class="kv"><span class="k">源</span><span class="v">${esc(window.MDX_TEX.entries[t.index].src || "")}
+           ${window.MDX_TEX.entries[t.index].w ? window.MDX_TEX.entries[t.index].w + "×" + window.MDX_TEX.entries[t.index].h : ""}</span></div>`
+        : ""}
+      <div class="field"><label>路径</label>
+        <input id="fPath" class="mono" value="${esc(cur)}"></div>
+      ${st ? `<div class="diffbox"><div class="row"><span class="k" style="color:#7d8794">原值</span>
+        <span class="old">${esc(st.from)}</span></div></div>` : ""}
+      <div class="divider"></div>
+      <div class="kv"><span class="k">类型</span>
+        <span class="v"><span class="lb ${CLS_CLASS[t.cls]}">${CLS_LABEL[t.cls]}</span></span></div>
+      <div class="kv"><span class="k">判定依据</span><span class="v">${esc(t.reason)}</span></div>
+      ${t.replaceableId ? `<div class="kv"><span class="k">replaceableId</span><span class="v num">${t.replaceableId}</span></div>` : ""}
+      <div class="kv"><span class="k">被引用</span><span class="v num">${refs} 处</span></div>
+      <div class="kv"><span class="k">写入块</span><span class="v">TEXS · 定长 256 B</span></div>
+      <div class="divider"></div>
+      <div class="btn-row">
+        <button class="btn sm" id="lockBtn">${S.locks.has(t.index) ? "取消锁定" : "锁定不改"}</button>
+        <button class="btn sm" id="pickBtn">选文件</button>
+      </div>`;
+    el("fPath").oninput = e => setChange(key, "textures", t.path, t.path, e.target.value, "TEXS");
+    el("lockBtn").onclick = () => {
+      if (S.locks.has(t.index)) S.locks.delete(t.index); else S.locks.add(t.index);
+      renderAll();
+    };
+    el("pickBtn").onclick = () => toast("原型未实现：本地文件选择");
+  }
+
+  else if (S.sel.kind === "materials") {
+    const m = D.materials[S.sel.index];
+    if (!m) { box.innerHTML = '<div class="empty">未选中</div>'; return; }
+    const l = m.layers[S.sel.layer];
+    if (!l) { box.innerHTML = '<div class="empty">未选中</div>'; return; }
+    const key = `mat:${m.index}:${l.index}`;
+    const st = S.changes.get(key);
+    const cur = st ? st.to.split("|") : [l.filter, l.alpha];
+    const hd = Object.entries(l.hd);
+    box.innerHTML = `
+      <div class="kv"><span class="k">材质 / 图层</span><span class="v num">#${m.index} · 层 ${l.index}</span></div>
+      <div class="kv"><span class="k">priorityPlane</span><span class="v num">${m.priorityPlane}</span></div>
+      <div class="divider"></div>
+      <div class="field"><label>FilterMode</label>
+        <select id="fFilter">${FILTERS.map(f => `<option ${f===cur[0]?"selected":""}>${f}</option>`).join("")}</select></div>
+      <div class="field"><label>Alpha</label>
+        <input id="fAlpha" type="number" min="0" max="1" step="0.05" value="${(+cur[1]).toFixed(2)}"></div>
+      ${st ? `<div class="diffbox">
+        <div class="row"><span class="k" style="color:#7d8794">原值</span>
+          <span class="old">${esc(st.from.split("|")[0])} / α ${esc(st.from.split("|")[1])}</span></div>
+        <div class="row"><span class="k" style="color:#7d8794">新值</span>
+          <span class="new">${esc(cur[0])} / α ${(+cur[1]).toFixed(2)}</span></div></div>` : ""}
+      <div class="divider"></div>
+      <div class="field"><label>漫反射</label>
+        <input value="${esc((textureOf(l.textureId)||{}).path || "—")}" readonly class="mono" style="color:#7d8794"></div>
+      ${hd.map(([k, v]) => `<div class="field"><label>${esc(k)}</label>
+        <input value="${esc((textureOf(v)||{}).path || "—")}" readonly class="mono" style="color:#7d8794"></div>`).join("")}
+      ${l.hdTrusted ? "" : `<div class="chip ext">HD 槽不可信</div>`}
+      <div class="divider"></div>
+      <div class="kv"><span class="k">两面</span><span class="v">${l.twoSided?"是":"否"}</span></div>
+      <div class="kv"><span class="k">无光照</span><span class="v">${l.unshaded?"是":"否"}</span></div>`;
+    const commit = () => {
+      const f = el("fFilter").value;
+      const a = Math.max(0, Math.min(1, parseFloat(el("fAlpha").value) || 0));
+      setChange(key, "materials", `材质 ${m.index} 层 ${l.index}`,
+        `${l.filter}|${l.alpha}`, `${f}|${a}`, "MTLS");
+    };
+    el("fFilter").onchange = commit;
+    el("fAlpha").oninput = commit;
+  }
+
+  else if (S.sel.kind === "sequences") {
+    const s = D.sequences[S.sel.index];
+    if (!s) { box.innerHTML = '<div class="empty">未选中</div>'; return; }
+    const key = `seq:${s.index}`;
+    const st = S.changes.get(key);
+    const v = st ? st.to.split("|") : [s.start, s.end, s.loop ? "1" : "0"];
+    box.innerHTML = `
+      <div class="field"><label>名称</label><input value="${esc(s.name)}" readonly style="color:#7d8794"></div>
+      <div class="row3" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field"><label>起 (ms)</label><input id="fStart" type="number" value="${v[0]}"></div>
+        <div class="field"><label>止 (ms)</label><input id="fEnd" type="number" value="${v[1]}"></div>
+      </div>
+      <div class="kv"><span class="k">时长</span><span class="v num">${(+v[1] - +v[0]).toLocaleString()} ms</span></div>
+      <div class="field"><label><input type="checkbox" id="fLoop" ${v[2]==="1"?"checked":""} style="width:auto"> 循环</label></div>
+      ${st ? `<div class="diffbox"><div class="row"><span class="k" style="color:#7d8794">原值</span>
+        <span class="old">${s.start}–${s.end}${s.loop?" 循环":" 单次"}</span></div>
+        <div class="row"><span class="k" style="color:#7d8794">新值</span>
+        <span class="new">${v[0]}–${v[1]}${v[2]==="1"?" 循环":" 单次"}</span></div></div>` : ""}
+      <div class="divider"></div>
+      <div class="kv"><span class="k">写入块</span><span class="v">SEQS · 定长 132 B</span></div>
+      <div class="btn-row"><button class="btn sm" id="goto">跳到该段</button></div>`;
+    const commit = () => {
+      const a = parseInt(el("fStart").value) || 0, b = parseInt(el("fEnd").value) || 0;
+      setChange(key, "sequences", s.name, `${s.start}|${s.end}|${s.loop?1:0}`,
+        `${a}|${b}|${el("fLoop").checked?1:0}`, "SEQS");
+    };
+    el("fStart").oninput = commit; el("fEnd").oninput = commit;
+    el("fLoop").onchange = commit;
+    el("goto").onclick = () => { S.seq = s.index; renderTimeline(); };
+  }
+
+  else {
+    const a = D.attachments[S.sel.index];
+    if (!a) { box.innerHTML = '<div class="empty">未选中</div>'; return; }
+    const key = `atc:${a.index}:mount`;
+    const st = S.changes.get(key);
+    const cur = st ? st.to : a.mount;
+    box.innerHTML = `
+      <div class="field"><label>名称</label><input id="fName" value="${esc(a.name)}"></div>
+      <div class="field"><label>父节点</label>
+        <input value="${esc(a.parentName)}  #${a.parentId}" readonly style="color:#7d8794" class="mono"></div>
+      <div class="row3" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field"><label>编号</label><input value="${a.objectId}" readonly style="color:#7d8794"></div>
+        <div class="field"><label>attachmentId</label><input value="${a.attachmentId}" readonly style="color:#7d8794"></div>
+      </div>
+      <div class="field"><label>挂载模型</label><input id="fMount" class="mono" value="${esc(cur||"")}"></div>
+      ${st ? `<div class="diffbox"><div class="row"><span class="k" style="color:#7d8794">原值</span>
+        <span class="old">${esc(st.from || "（空）")}</span></div></div>` : ""}
+      <div class="divider"></div>
+      <div class="kv"><span class="k">写入块</span><span class="v">ATCH · 定长 256 B</span></div>
+      <div class="btn-row">
+        <button class="btn sm accent" id="mountPick">选武器</button>
+        <button class="btn sm" id="focusBtn">定位</button>
+      </div>`;
+    el("fMount").oninput = e => setChange(key, "attachments", a.name, a.mount, e.target.value, "ATCH");
+    el("mountPick").onclick = () => openMount(a.index);
+    el("focusBtn").onclick = () => toast(`视口已定位到 ${a.name}`);
+  }
+}
+
+/* ---------------- 时间轴 ---------------- */
+function renderTimeline() {
+  const tr = el("tlTrack");
+  if (!D.sequences || !D.sequences.length) {
+    tr.innerHTML = '<div style="padding:10px 0;color:#525c68;font-size:11px">该模型没有动画序列</div>';
+    if (el("tlCur")) el("tlCur").textContent = "—";
+    if (el("tlBands")) el("tlBands").innerHTML = "";
+    return;
+  }
+  if (!(S.seq >= 0 && S.seq < D.sequences.length)) S.seq = 0;
+  tr.innerHTML = D.sequences.map(s => {
+    const left = (s.start / TOTAL) * 100, w = ((s.end - s.start) / TOTAL) * 100;
+    const st = S.changes.get(`seq:${s.index}`);
+    const on = S.seq === s.index;
+    return `<div class="tl-seg ${on?"on":""}" data-i="${s.index}"
+      style="left:${left}%;width:calc(${w}% - 3px)">
+      <span class="nm">${esc(s.name)}</span>${s.loop?'<span class="lp">↻</span>':""}
+      ${st?'<span class="lp" style="color:#8fd08a">●</span>':""}
+    </div>`;
+  }).join("");
+
+  const keys = D.sequences.map((s, i) => {
+    const n = Math.max(3, Math.round((s.end - s.start) / 420));
+    let h = "";
+    for (let k = 0; k < n; k++) {
+      const seed = Math.sin((i * 37 + k * 91)) * 10000;
+      const hh = 3 + (Math.abs(seed) % 10);
+      const x = (s.start / TOTAL) * 100 + ((s.end - s.start) / TOTAL) * 100 * (k / n);
+      h += `<i style="position:absolute;left:${x}%;bottom:0;width:1px;height:${hh}px;background:#33414e"></i>`;
+    }
+    return h;
+  }).join("");
+  tr.insertAdjacentHTML("beforeend", `<div class="tl-keys">${keys}</div>`);
+
+  tr.querySelectorAll(".tl-seg").forEach(node => {
+    node.onclick = () => {
+      S.seq = +node.dataset.i;
+      S.sel = { kind: "sequences", index: S.seq };
+      const sq = D.sequences[S.seq];
+      R.playing = false;
+      R.dir = 1;
+      setTime(sq.start);
+      renderAll();
+      if (S.autoPlay && R.group) togglePlay(true);
+    };
+  });
+
+  const bands = el("tlBands");
+  if (bands) {
+    bands.innerHTML = D.sequences.map(s =>
+      `<i class="${S.seq === s.index ? "on" : ""}" style="width:${((s.end - s.start) / TOTAL * 100).toFixed(3)}%"></i>`
+    ).join("");
+  }
+
+  const cur = D.sequences[S.seq];
+  el("tlCur").innerHTML = `<b>${esc(cur.name)}</b> ${cur.start}–${cur.end} ms · ` +
+    `${(cur.end - cur.start).toLocaleString()} ms · ${cur.loop ? "循环" : "单次"}`;
+  updateTimeHud();
+}
+
+/* ---------------- 批量改路径 ---------------- */
+function openBulk() {
+  const ext = D.textures.filter(t => t.cls === "external" && !S.locks.has(t.index));
+  const skips = D.textures.filter(t => t.cls !== "external" || S.locks.has(t.index)).length;
+  el("dialog").className = "dialog wide";
+  el("dialog").innerHTML = `
+    <div class="dlg-head">一键改外部贴图路径</div>
+    <div class="dlg-body">
+      <div class="seg" id="modeSeg" style="align-self:flex-start">
+        <button data-m="prefix" class="on">统一前缀</button>
+        <button data-m="replace">查找替换</button>
+      </div>
+      <div class="field" id="p1"><label>前缀</label>
+        <input id="prefixIn" class="mono" value="MyMod\\"></div>
+      <div class="field" id="p2" style="display:none"><label>查找</label>
+        <input id="findIn" class="mono" value="AF\\">
+        <label style="margin-top:6px">替换为</label>
+        <input id="replIn" class="mono" value="MyMod\\"></div>
+      <div class="field"><label><input type="checkbox" id="flatIn" checked style="width:auto"> 压平子目录（只留文件名）</label></div>
+      <div class="divider"></div>
+      <div class="kv"><span class="k">命中</span><span class="v" id="hitN">—</span></div>
+      <div class="kv"><span class="k">跳过</span><span class="v num">${skips} 条（内置 / 可替换 / 已锁定）</span></div>
+      <div class="chg-list" id="previewList"></div>
+    </div>
+    <div class="dlg-foot">
+      <div class="spacer"></div>
+      <button class="btn" id="cancel">取消</button>
+      <button class="btn accent" id="apply">应用</button>
+    </div>`;
+
+  const recalc = () => {
+    const mode = el("modeSeg").querySelector(".on").dataset.m;
+    const prefix = el("prefixIn").value;
+    const find = el("findIn").value, repl = el("replIn").value;
+    const flat = el("flatIn").checked;
+    const out = [];
+    ext.forEach(t => {
+      let p;
+      if (mode === "prefix") {
+        const base = flat ? t.file : pTail(t.path);
+        p = prefix.replace(/\\+$/,"") + "\\" + base;
+      } else {
+        p = t.path.split(find).join(repl);
+      }
+      if (p !== t.path) out.push([t, p]);
+    });
+    el("hitN").textContent = `${out.length} 条`;
+    el("previewList").innerHTML = out.slice(0, 40).map(([t, p]) =>
+      `<div class="chg-item"><span class="p">#${t.index}</span>
+        <span class="o">${esc(t.path)}</span><span style="color:#525c68">→</span>
+        <span class="a">${esc(p)}</span></div>`).join("") ||
+      `<div class="chg-item" style="color:#525c68">无命中</div>`;
+    return out;
+  };
+  const pTail = p => p.split("\\").slice(1).join("\\") || p;
+
+  el("modeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+    el("modeSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    el("p1").style.display = b.dataset.m === "prefix" ? "" : "none";
+    el("p2").style.display = b.dataset.m === "replace" ? "" : "none";
+    recalc();
+  });
+  ["prefixIn","findIn","replIn","flatIn"].forEach(id => el(id).oninput = recalc);
+  recalc();
+
+  el("cancel").onclick = closeDialog;
+  el("apply").onclick = () => {
+    const out = recalc();
+    out.forEach(([t, p]) => S.changes.set(`tex:${t.index}:path`,
+      { scope:"textures", label:t.path, from:t.path, to:p, chunk:"TEXS" }));
+    closeDialog();
+    renderAll();
+    toast(`已应用 ${out.length} 条改动（尚未写入文件）`);
+  };
+}
+
+/* ---------------- 挂载武器 ---------------- */
+function openMount(idx) {
+  const a = D.attachments[idx];
+  el("dialog").className = "dialog";
+  el("dialog").innerHTML = `
+    <div class="dlg-head">挂载武器 → ${esc(a.name)}</div>
+    <div class="dlg-body">
+      <div class="field"><label>武器来源</label>
+        <div class="seg" id="srcSeg" style="align-self:flex-start">
+          <button data-s="game" class="on">游戏自带</button>
+          <button data-s="local">本地文件</button>
+        </div></div>
+      <div class="field"><label>模型</label>
+        <input id="wPath" class="mono" value="abilities\\weapons\\axe\\axemissile.mdx"></div>
+      <div class="divider"></div>
+      <div class="kv"><span class="k">附着点</span><span class="v">${esc(a.name)}</span></div>
+      <div class="kv"><span class="k">父节点</span><span class="v">${esc(a.parentName)} #${a.parentId}</span></div>
+      <div class="kv"><span class="k">写入</span><span class="v">ATCH path · 256 B</span></div>
+      <div class="row"></div>
+    </div>
+    <div class="dlg-foot">
+      <div class="spacer"></div>
+      <button class="btn" id="cancel">取消</button>
+      <button class="btn accent" id="apply">挂载</button>
+    </div>`;
+  el("cancel").onclick = closeDialog;
+  el("srcSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+    el("srcSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    el("wPath").value = b.dataset.s === "game"
+      ? "abilities\\weapons\\axe\\axemissile.mdx" : "war3mapImported\\Sword.mdx";
+  });
+  el("apply").onclick = () => {
+    S.changes.set(`atc:${a.index}:mount`, {
+      scope:"attachments", label:a.name, from:a.mount, to:el("wPath").value, chunk:"ATCH" });
+    closeDialog(); renderAll();
+    toast(`已挂载到 ${a.name}`);
+  };
+}
+
+/* ---------------- 导出 ---------------- */
+function openExport() {
+  const list = [...S.changes.entries()];
+  const groups = {};
+  list.forEach(([k, c]) => (groups[c.chunk] = groups[c.chunk] || []).push([k, c]));
+  const structural = Object.keys(groups).some(g => g !== "TEXS" && g !== "MTLS" && g !== "SEQS" && g !== "ATCH");
+  el("dialog").className = "dialog wide";
+  el("dialog").innerHTML = `
+    <div class="dlg-head">导出 · 待写入 ${list.length} 处</div>
+    <div class="dlg-body">
+      ${list.length === 0 ? `<div class="empty">没有改动，将透传原始字节。</div>` : ""}
+      <div class="chg-list">
+        ${Object.entries(groups).map(([chunk, items]) => `
+          <div class="chg-group"><span>${chunk}</span>
+            <span>${items.length} 处 · ${chunk==="ATCH"||chunk==="TEXS"?"定长覆写":"字段覆写"}</span></div>
+          ${items.map(([k, c]) => `<div class="chg-item"><span class="p">${chunk}</span>
+            <span class="o">${esc(c.from || "—")}</span>
+            <span style="color:#525c68">→</span>
+            <span class="a">${esc(c.to || "—")}</span></div>`).join("")}`).join("")}
+      </div>
+      <div class="divider"></div>
+      <div class="kv"><span class="k">文件长度</span><span class="v num">${fmtB(D.model.bytes)} → ${fmtB(D.model.bytes)}（不变）</span></div>
+      <div class="kv"><span class="k">校验</span><span class="v" style="color:#3fb950">长度不变 · 差异全部落在目标字段</span></div>
+      <div class="kv"><span class="k">备份</span><span class="v">${esc(D.model.file)}.bak</span></div>
+    </div>
+    <div class="dlg-foot">
+      <div class="hint">写入前自动备份</div>
+      <div class="spacer"></div>
+      <button class="btn" id="cancel">取消</button>
+      <button class="btn" id="cancel2">仅保存工程</button>
+      <button class="btn accent" id="apply">写入文件</button>
+    </div>`;
+  el("cancel").onclick = closeDialog;
+  el("cancel2").onclick = () => { closeDialog(); toast("已保存工程（未写入 mdx）"); };
+  el("apply").onclick = () => {
+    closeDialog();
+    S.changes.clear();
+    renderAll();
+    toast(`已写入 · 校验通过 · 长度未变 · 备份 .bak`);
+  };
+}
+
+/* ---------------- 通用 ---------------- */
+function openDialog(html) { el("dialog").innerHTML = html; el("overlay").classList.add("on"); }
+function closeDialog() { el("overlay").classList.remove("on"); }
+let toastTimer = null;
+function toast(msg) {
+  const t = el("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+function renderAll() {
+  renderTree(); renderViewport(); renderTable(); renderInspector();
+  renderTimeline(); renderStatus();
+}
+
+el("exportBtn").onclick = openExport;
+/* 上下分栏拖动 */
+(() => {
+  const center = document.querySelector(".center");
+  let drag = false;
+  el("splitter").addEventListener("mousedown", e => { drag = true; e.preventDefault();
+    document.body.style.cursor = "row-resize"; });
+  window.addEventListener("mousemove", e => {
+    if (!drag) return;
+    const r = center.getBoundingClientRect();
+    let pct = ((e.clientY - r.top) / r.height) * 100;
+    pct = Math.max(16, Math.min(80, pct));
+    center.style.gridTemplateRows = pct + "% 6px 1fr";
+  });
+  window.addEventListener("mouseup", () => { drag = false; document.body.style.cursor = ""; });
+})();
+el("dirtyChip").onclick = openExport;
+el("blenderBtn").onclick = () => toast("未检测到 Blender：该入口在你安装后会启用");
+if (el("modelSel")) {
+  el("modelSel").value = window.MDX_SLUG || "david";
+  el("modelSel").onchange = e => {
+    R.playing = false;
+    location.search = "?m=" + encodeURIComponent(e.target.value);
+  };
+}
+el("q").oninput = e => { S.query = e.target.value; renderTable(); };
+el("overlay").onclick = e => { if (e.target.id === "overlay") closeDialog(); };
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeDialog(); return; }
+  if (e.code === "Space") {
+    const tag = (e.target && e.target.tagName) || "";
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(tag)) return;
+    e.preventDefault();
+    togglePlay();
+  }
+});
+
+/* 初始化 */
+el("fname").textContent = D.model.file;
+el("fmeta").textContent = `${fmtB(D.model.bytes)} · ${D.model.chunks.length} chunks · ver ${D.model.version}`;
+S.sel = (D.textures && D.textures.length)
+  ? { kind: "textures", index: Math.min(10, D.textures.length - 1) }
+  : (D.attachments && D.attachments.length ? { kind: "attachments", index: 0 } : null);
+renderAll();
+try {
+  initViewport();
+} catch (err) {
+  window.__bootErr = (err && err.stack) || String(err);
+  showFatal("3D 初始化失败", (err && err.message) || String(err));
+  if (window.console) console.error(err);
+}
+
+/* 自诊断：控制台执行 MDX_DEBUG 看状态 */
+window.MDX_DEBUG = {
+  get status() {
+    const cv = el("vp");
+    const r = cv ? cv.getBoundingClientRect() : { width: 0, height: 0 };
+    return {
+      three: T3 ? T3.REVISION : null,
+      model: !!MD,
+      data: !!D,
+      meshes: R.meshes.length,
+      normalMaps: R.meshes.filter(m => m.material && m.material.normalMap).length,
+      maps: R.meshes.filter(m => m.material && m.material.map).length,
+      matType: R.meshes.length ? R.meshes[0].material.type : null,
+      geometry: R.meshes.length ? R.meshes.reduce((s, m) => s + m.geometry.attributes.position.count, 0) : 0,
+      cssSize: [Math.round(r.width), Math.round(r.height)],
+      buffer: R.renderer ? [R.renderer.domElement.width, R.renderer.domElement.height] : null,
+      camera: R.camera ? R.camera.position.toArray().map(v => +v.toFixed(2)) : null,
+      target: R.target ? R.target.toArray() : null,
+      dist: +R.dist.toFixed(2),
+      time: Math.round(R.time),
+      error: window.__bootErr,
+    };
+  },
+};
+</script>
+</body>
+</html>
