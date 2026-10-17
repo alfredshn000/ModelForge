@@ -1,5 +1,7 @@
 # ModelForge
 
+**简体中文** ｜ [English](README.en.md)
+
 面向《魔兽争霸 III》的模型工具链。内核 `mdxcore` 用纯 Python 实现 MDX 解析与**定点写入**：
 不认识的块原样透传，只把改动过的字段落盘，写盘前校验长度与块完整性。
 
