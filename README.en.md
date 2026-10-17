@@ -13,6 +13,9 @@ geometry and skinning.
 Supports both Classic and Reforged (HD) assets, direct CASC reading, tiered texture loading and live
 team-colour switching.
 
+> **Compatibility**: tested against Warcraft III 3.0.0. Earlier versions are untested and not
+> guaranteed to work.
+
 ## What it does
 
 | Area | Detail |
