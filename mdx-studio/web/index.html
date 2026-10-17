@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/favicon.ico">
+  <title>ModelForge</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#14181e; --panel2:#1a1f26; --panel3:#1f252d;
+    --line:#242b34; --line2:#2e3742;
+    --text:#dfe4ea; --dim:#7d8794; --faint:#525c68;
+    --accent:#4c9aff; --ok:#3fb950; --warn:#d98b3a; --danger:#e5534b;
+    --radius:4px;
+    --row:26px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font:12.5px/1.45 system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+    overflow:hidden; user-select:none;
+  }
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+  input,select{font:inherit; color:var(--text); background:var(--panel3);
+    border:1px solid var(--line2); border-radius:3px; padding:3px 6px; outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  input[type=range]{padding:0}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- 骨架 ---------- */
+  .app{display:grid; grid-template-rows:44px 1fr 96px; height:100vh}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:8px; padding:0 12px;
+    background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  .brand{
+    display:flex; align-items:center; gap:7px; padding-right:2px;
+    font-size:12.5px; letter-spacing:.2px; color:var(--text);
+  }
+  .brand img{width:20px; height:20px; display:block}
+  .brand b{font-weight:600}
+  .brand b span{color:#4d9fff}
+  .tb-btn{
+    height:26px; padding:0 10px; border-radius:3px; display:flex;
+    align-items:center; gap:6px; color:var(--text); border:1px solid transparent;
+  }
+  .tb-btn:hover{background:var(--panel3)}
+  .tb-btn.primary{background:#1e4f8f; border-color:#2a63ad}
+  .tb-btn.primary:hover{background:#255da6}
+  .tb-btn.ghost{border-color:var(--line2)}
+  .tb-btn[disabled]{color:var(--faint); cursor:default; background:none; border-color:transparent}
+  .sep{width:1px; height:18px; background:var(--line2); margin:0 4px}
+  .fileinfo{display:flex; align-items:baseline; gap:8px; margin-left:6px;
+    min-width:0; overflow:hidden; white-space:nowrap}
+  .fileinfo b{font-weight:600}
+  .fileinfo span{color:var(--dim); font-size:11.5px}
+  .spacer{flex:1}
+  .dirty{
+    display:flex; align-items:center; gap:6px; height:24px; padding:0 9px;
+    border-radius:12px; background:#1a2a18; color:#8fd08a; font-size:11.5px;
+    border:1px solid #2c4529; cursor:pointer;
+  }
+  .dirty.zero{background:var(--panel2); color:var(--faint); border-color:var(--line)}
+  .dirty .dot{width:6px; height:6px; border-radius:50%; background:var(--ok)}
+  .dirty.zero .dot{background:var(--faint)}
+  .badge-ok{
+    display:flex; align-items:center; gap:5px; height:24px; padding:0 9px;
+    border-radius:12px; font-size:11.5px; color:var(--ok);
+    background:#13251a; border:1px solid #22422c;
+  }
+
+  /* ---------- 队伍色 ---------- */
+  .team-dot{
+    width:10px; height:10px; border-radius:50%; background:#ff0303;
+    box-shadow:0 0 0 1px rgba(0,0,0,.45) inset;
+  }
+  .team-pop{
+    position:fixed; top:44px; right:70px; z-index:60; display:none;
+    padding:10px; border-radius:6px; background:var(--panel2);
+    border:1px solid var(--line2); box-shadow:0 12px 28px rgba(0,0,0,.5);
+  }
+  .team-pop.on{display:block}
+  .team-pop .tp-head{font-size:11.5px; color:var(--faint); margin-bottom:8px}
+  .team-pop .tp-grid{display:grid; grid-template-columns:repeat(6, 22px); gap:6px}
+  .team-pop .tp-cell{
+    width:22px; height:22px; border-radius:3px; cursor:pointer;
+    border:1px solid rgba(0,0,0,.5); position:relative;
+  }
+  .team-pop .tp-cell:hover{outline:1px solid var(--text)}
+  .team-pop .tp-cell.on::after{
+    content:""; position:absolute; inset:2px; border-radius:2px;
+    box-shadow:0 0 0 1.5px #fff inset;
+  }
+
+  /* ---------- 主区 ---------- */
+  .main{display:grid; grid-template-columns:236px 1fr 312px; min-height:0}
+  @media (max-width:1280px){ .main{grid-template-columns:204px 1fr 284px} }
+  @media (max-width:1040px){
+    .main{grid-template-columns:184px 1fr 260px}
+    .fileinfo span{display:none}
+  }
+
+  /* 左：资源树 */
+  .sidebar{background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0}
+  .sb-head{
+    height:30px; display:flex; align-items:center; padding:0 12px;
+    color:var(--faint); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+    border-bottom:1px solid var(--line);
+  }
+  .tree{padding:6px 0; overflow:auto}
+  .tree-item{
+    display:flex; align-items:center; gap:8px; height:28px; padding:0 12px;
+    cursor:pointer; color:var(--dim); border-left:2px solid transparent;
+  }
+  .tree-item:hover{background:var(--panel2); color:var(--text)}
+  .tree-item.on{background:#1b2532; color:var(--text); border-left-color:var(--accent)}
+  .tree-item .ico{width:14px; text-align:center; opacity:.75; font-size:12px}
+  .tree-item .lbl{flex:1}
+  .tree-item .cnt{
+    font-size:10.5px; color:var(--faint); background:var(--panel3);
+    padding:1px 6px; border-radius:9px; min-width:22px; text-align:center;
+  }
+  .tree-item.on .cnt{color:var(--accent)}
+  .tree-sec{
+    padding:10px 12px 4px; color:var(--faint); font-size:10.5px; letter-spacing:.1em;
+  }
+
+  /* 中：视口 + 表格（可拖动上下分栏） */
+  .center{display:grid; grid-template-rows:46% 6px 1fr; min-height:0}
+  .splitter{
+    background:var(--line); cursor:row-resize; display:flex;
+    align-items:center; justify-content:center; z-index:5;
+  }
+  .splitter:hover{background:#33414e}
+  .splitter i{width:38px; height:2px; background:#3c4a56; border-radius:1px}
+  .viewport{position:relative; background:
+      radial-gradient(120% 90% at 50% 0%, #182430 0%, #0d1015 62%); overflow:hidden}
+  .vp-canvas{
+    position:absolute; inset:0; width:100%; height:100%; display:block;
+    cursor:grab; touch-action:none;
+  }
+  .vp-canvas:active{cursor:grabbing}
+  .vp-fallback{
+    position:absolute; inset:0; display:none; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px;
+    text-align:center; pointer-events:none;
+  }
+  .vp-fallback.on{display:flex}
+  .vp-fallback.banner{justify-content:flex-start; padding-top:52px}
+  .fb-card{
+    display:flex; flex-direction:column; gap:5px; max-width:560px;
+    background:rgba(14,17,22,.92); border:1px solid #3a3020;
+    border-left:2px solid #e0a33f; border-radius:4px; padding:9px 12px;
+    text-align:left; box-shadow:0 8px 24px rgba(0,0,0,.45);
+  }
+  .fb-card b{font-size:12px; color:#e0a33f}
+  .fb-card span{font-size:11px; color:#8f9aa6; line-height:1.55;
+    font-family:ui-monospace,Consolas,monospace; word-break:break-all}
+  .hud{position:absolute; pointer-events:none}
+  .hud > *{pointer-events:auto}
+  .hud-tl{top:10px; left:12px; display:flex; flex-direction:column; gap:2px;
+    max-width:calc(100% - 130px)}
+  .hud-tl .t1{font-size:12px; color:var(--text); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  .hud-tl .t2{font-size:11px; color:var(--faint); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  .hud-tr{top:10px; right:12px; display:flex; gap:4px}
+  .seg{display:flex; background:rgba(20,24,30,.82); border:1px solid var(--line2); border-radius:4px; overflow:hidden}
+  .seg button{padding:3px 10px; font-size:11px; color:var(--dim)}
+  .seg button.on{background:#22303f; color:var(--text)}
+  .hud-bl{bottom:12px; left:12px}
+  .hud-br{bottom:12px; right:12px; display:flex; align-items:center; gap:8px;
+    background:rgba(20,24,30,.7); padding:4px 8px; border-radius:4px; border:1px solid var(--line)}
+  .hud-br .zbar{width:74px; height:3px; background:var(--line2); border-radius:2px; position:relative}
+  .hud-br .zbar i{position:absolute; left:0; top:0; height:3px; width:38%; background:var(--accent); border-radius:2px; display:block}
+  .hud-br span{font-size:10.5px; color:var(--dim)}
+
+  /* 右：属性 */
+  .inspector{background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0}
+  .insp-head{
+    height:30px; display:flex; align-items:center; gap:8px; padding:0 12px;
+    border-bottom:1px solid var(--line); color:var(--faint);
+    font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+  }
+  .insp-body{overflow:auto; padding:12px; display:flex; flex-direction:column; gap:14px}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field > label{color:var(--dim); font-size:11px}
+  .field input, .field select{width:100%}
+  .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace; font-size:11.5px}
+  .kv{display:flex; justify-content:space-between; gap:10px; padding:3px 0; font-size:11.5px}
+  .kv .k{color:var(--dim)}
+  .kv .v{color:var(--text); text-align:right; word-break:break-all}
+  .divider{height:1px; background:var(--line); margin:2px 0}
+  .diffbox{
+    background:#12212e; border:1px solid #1d3a52; border-left:2px solid var(--accent);
+    border-radius:3px; padding:7px 9px; display:flex; flex-direction:column; gap:3px;
+  }
+  .diffbox .row{font-size:11px; display:flex; gap:6px; align-items:baseline}
+  /* 改动前/后的对照：不划线。删除线在界面语义里等于"这项被删掉了"，
+     而这里只是"从 A 改成 B"，两者容易混淆。用明暗区分就够了。 */
+  .diffbox .old{color:#8b949e; word-break:break-all}
+  .diffbox .new{color:#7fc4ff; word-break:break-all}
+  .empty{color:var(--faint); font-size:11.5px}
+  .btn-row{display:flex; gap:6px}
+  .btn{
+    height:26px; padding:0 10px; border-radius:3px; border:1px solid var(--line2);
+    font-size:11.5px; color:var(--text); display:inline-flex; align-items:center; gap:5px;
+  }
+  .btn:hover{background:var(--panel3)}
+  .btn.accent{background:#1e4f8f; border-color:#2a63ad}
+  .btn.accent:hover{background:#255da6}
+  .btn.danger{color:#e59a96; border-color:#4a2c2a}
+  .btn.danger:hover{background:#2a1a19}
+  .btn.sm{height:22px; padding:0 7px; font-size:11px}
+  .chips{display:flex; flex-wrap:wrap; gap:4px}
+  .chip{
+    font-size:10.5px; padding:1px 7px; border-radius:9px; border:1px solid var(--line2);
+    color:var(--dim);
+  }
+  .chip.ext{color:#e5b276; border-color:#4a3a24; background:#221a10}
+  .chip.blt{color:#8e99a6; border-color:#2c343e; background:#191e24}
+  .chip.rpl{color:#7fb6f5; border-color:#243d5a; background:#101c29}
+
+  /* ---------- 表区（覆盖在视口上？不，表区属于左侧内容区） ---------- */
+  .tablewrap{background:var(--bg); display:flex; flex-direction:column; min-height:0; overflow:hidden}
+  .tw-bar{
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  .tw-bar .q{width:230px}
+  .tabs{display:flex; gap:2px; margin-left:4px}
+  .tabs button{
+    font-size:11px; padding:3px 9px; border-radius:3px; color:var(--dim);
+  }
+  .tabs button.on{background:var(--panel3); color:var(--text)}
+  .tabs .n{opacity:.55; margin-left:4px}
+  .thead{
+    display:grid; padding:0 12px; height:24px; align-items:center;
+    color:var(--faint); font-size:10.5px; letter-spacing:.06em;
+    border-bottom:1px solid var(--line); background:var(--panel);
+    position:sticky; top:0; z-index:2;
+  }
+  .tbody{overflow:auto; flex:1}
+  .trow{
+    display:grid; padding:0 12px; height:var(--row); align-items:center;
+    border-bottom:1px solid #1a1f26; cursor:pointer; position:relative;
+  }
+  .trow:hover{background:#171c23}
+  .trow.on{background:#1b2532}
+  .trow.on::before{content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accent)}
+  .trow.changed{background:#141f16}
+  .trow.changed:hover{background:#17241a}
+  .trow.changed .cell-path{color:#8fd08a}
+  .cell-path{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text)}
+  .cell-dim{color:var(--dim)}
+  .grid-tex{grid-template-columns:30px 26px 1fr 70px 24px}
+  .grid-mat{grid-template-columns:38px 1fr 96px 70px}
+  .grid-seq{grid-template-columns:26px 1fr 88px 88px 62px 46px}
+  .grid-atc{grid-template-columns:26px 1fr 1fr 52px 1fr}
+  .lb{
+    font-size:10px; padding:0 6px; height:16px; line-height:16px; border-radius:8px;
+    display:inline-block; text-align:center; min-width:44px;
+  }
+  .lb.ext{color:#e5b276; background:#241a0f; border:1px solid #46331f}
+  .lb.blt{color:#8e99a6; background:#181d23; border:1px solid #2b323b}
+  .lb.rpl{color:#7fb6f5; background:#101c29; border:1px solid #233c58}
+  .thumb{
+    width:22px; height:22px; border-radius:2px; display:block;
+    object-fit:cover; background:#0b0e13; border:1px solid var(--line);
+    image-rendering:auto;
+  }
+  .thumb-none{
+    width:22px; height:22px; border-radius:2px; display:flex; align-items:center;
+    justify-content:center; font-size:9px; color:#7a5450;
+    background:repeating-linear-gradient(45deg,#16191e 0 3px,#1d2128 3px 6px);
+    border:1px dashed #4a3230;
+  }
+  .tex-big{
+    width:100%; height:170px; object-fit:contain; border-radius:3px;
+    background:#0b0e13 repeating-conic-gradient(#151a21 0% 25%, #10141a 0% 50%) 50%/16px 16px;
+    border:1px solid var(--line2);
+  }
+  .tex-big-none{
+    width:100%; height:170px; border-radius:3px; display:flex; align-items:center;
+    justify-content:center; font-size:11px; color:var(--faint);
+    background:#11151b; border:1px dashed #2a323b;
+  }
+  .lockbtn{opacity:.28; font-size:11px}
+  .lockbtn:hover{opacity:.9}
+  .lockbtn.on{opacity:1; color:var(--warn)}
+
+  /* ---------- 时间轴 ---------- */
+  .timeline{
+    background:var(--panel); border-top:1px solid var(--line);
+    display:flex; flex-direction:column; position:relative;
+  }
+  .tl-bar{display:flex; align-items:center; gap:10px; padding:5px 12px; border-bottom:1px solid var(--line)}
+  .tl-play{
+    width:24px; height:22px; border:1px solid var(--line2); border-radius:3px;
+    font-size:9px; color:var(--text); display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto;
+  }
+  .tl-play:hover{background:var(--panel3); border-color:#3c4a56}
+  .tl-opt{
+    height:22px; padding:0 7px; border:1px solid var(--line2); border-radius:3px;
+    font-size:10.5px; color:var(--dim); display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto;
+  }
+  .tl-opt:hover{background:var(--panel3); color:var(--text)}
+  .tl-opt.on{color:#cfe4fb; background:#1b3d63; border-color:#2f6ba8}
+  .tl-opt.wide{font-size:10px; letter-spacing:0}
+  .tl-bar .cur{
+    font-size:11.5px; color:var(--text); white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; max-width:36%; flex:0 0 auto;
+  }
+  .tl-bar .cur b{color:var(--accent); font-weight:600}
+  .tl-scrub{
+    flex:1; position:relative; height:16px; background:#11161c;
+    border:1px solid var(--line); border-radius:3px; cursor:pointer; overflow:hidden;
+  }
+  .tl-scrub:hover{border-color:#3c4a56}
+  .tl-bands{position:absolute; inset:0; display:flex}
+  .tl-bands i{height:100%; border-right:1px solid #1b222a; display:block}
+  .tl-bands i.on{background:#17242f}
+  .tl-head{
+    position:absolute; top:0; bottom:0; width:2px; background:var(--accent);
+    box-shadow:0 0 7px rgba(76,154,255,.85); pointer-events:none;
+  }
+  .tl-head::after{
+    content:""; position:absolute; left:-4px; top:0; width:10px; height:5px;
+    background:var(--accent); clip-path:polygon(0 0,100% 0,50% 100%);
+  }
+  .tl-time{font-size:11px; color:var(--dim); min-width:76px; text-align:right; flex:0 0 auto}
+  .tl-track{flex:1; position:relative; margin:0 12px 8px; min-height:0}
+  .tl-seg{
+    position:absolute; top:4px; height:26px; border-radius:3px; overflow:hidden;
+    background:#1e2833; border:1px solid #2b3746; cursor:pointer;
+    display:flex; align-items:center; padding:0 7px;
+  }
+  .tl-seg:hover{background:#25313f}
+  .tl-seg.on{background:#1b3d63; border-color:#2f6ba8}
+  .tl-seg .nm{font-size:10.5px; color:#a8b5c3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .tl-seg.on .nm{color:#cfe4fb}
+  .tl-seg .lp{font-size:9px; color:var(--faint); margin-left:5px}
+  .tl-keys{position:absolute; top:34px; left:0; right:0; height:14px}
+
+  /* ---------- 覆盖层 ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,8,11,.62); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:50;
+  }
+  .overlay.on{display:flex}
+  .dialog{
+    width:520px; max-height:78vh; background:var(--panel); border:1px solid var(--line2);
+    border-radius:6px; box-shadow:0 18px 50px rgba(0,0,0,.55);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .dialog.wide{width:620px}
+  .dlg-head{
+    height:38px; display:flex; align-items:center; padding:0 14px;
+    border-bottom:1px solid var(--line); font-size:12.5px;
+  }
+  .dlg-body{padding:14px; overflow:auto; display:flex; flex-direction:column; gap:12px}
+  .dlg-foot{
+    padding:10px 14px; border-top:1px solid var(--line); display:flex;
+    align-items:center; gap:8px; background:var(--panel2);
+  }
+  .chg-list{display:flex; flex-direction:column; gap:1px; max-height:220px; overflow:auto;
+    border:1px solid var(--line); border-radius:3px; background:#101419}
+  .chg-group{padding:6px 10px; background:var(--panel2); font-size:11px; color:var(--dim);
+    display:flex; justify-content:space-between; position:sticky; top:0}
+  .chg-item{padding:4px 10px; font-size:11px; display:flex; gap:8px; align-items:baseline}
+  .chg-item .p{color:var(--faint); min-width:34px}
+  .chg-item .o{color:#8b949e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .chg-item .a{color:#7fc4ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .chg-item .arrow{color:#525c68}
+  /* 资源列表（游戏内置模型等）：中性样式，别借用上面那套"改动前/后"的语义 */
+  .gitem{padding:4px 10px; font-size:11px; display:flex; gap:8px;
+         align-items:baseline; cursor:pointer; border-radius:3px}
+  .gitem:hover{background:var(--panel3)}
+  .gitem .g-dir{color:var(--faint); min-width:60px; max-width:150px; overflow:hidden;
+                text-overflow:ellipsis; white-space:nowrap}
+  .gitem .g-name{color:var(--text); flex:1; overflow:hidden;
+                 text-overflow:ellipsis; white-space:nowrap}
+  .gitem .g-where{color:#525c68; font-size:10px}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .hint{font-size:11px; color:var(--faint)}
+  .ok-line{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ok)}
+
+  .toast{
+    position:fixed; bottom:118px; left:50%; transform:translate(-50%,10px);
+    background:#16281b; border:1px solid #2c4a30; color:#a5db9f;
+    padding:7px 14px; border-radius:4px; font-size:11.5px; opacity:0;
+    transition:.22s; pointer-events:none; z-index:80;
+  }
+  .toast.on{opacity:1; transform:translate(-50%,0)}
+  ::-webkit-scrollbar{width:9px; height:9px}
+  ::-webkit-scrollbar-thumb{background:#2a333d; border-radius:5px; border:2px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:#39454f}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand" title="ModelForge — Warcraft III 模型编辑器">
+      <img src="/logo.png" alt="ModelForge">
+      <b>Model<span>Forge</span></b>
+    </div>
+    <div class="sep"></div>
+    <button class="tb-btn ghost" id="openBtnTop" data-i18n="打开">打开</button>
+    <button class="tb-btn ghost" id="saveBtnTop" data-i18n="保存">保存</button>
+    <div class="sep"></div>
+    <button class="tb-btn primary" id="exportBtn" data-i18n="导出">导出</button>
+    <div class="fileinfo">
+      <b id="fname">—</b>
+      <span id="fmeta"></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="dirty zero" id="dirtyChip"><i class="dot"></i><span id="dirtyText" data-i18n="未改动">未改动</span></div>
+    <div class="badge-ok" data-i18n="校验通过">校验通过</div>
+    <button class="tb-btn ghost" id="teamBtn" title="队伍颜色 / Team color">
+      <i class="team-dot" id="teamDot"></i><span id="teamName" data-i18n="队伍色">队伍色</span>
+    </button>
+    <button class="tb-btn ghost" id="langBtn" title="切换语言 / Switch language">EN</button>
+  </header>
+
+  <!-- 24 个玩家颜色，从游戏的 TeamColor00–23.blp 读出 -->
+  <div class="team-pop" id="teamPop">
+    <div class="tp-head" data-i18n="队伍颜色">队伍颜色</div>
+    <div class="tp-grid" id="teamGrid"></div>
+  </div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sb-head" data-i18n="资源">资源</div>
+      <div class="tree" id="tree"></div>
+      <div class="tree-sec" data-i18n="模型">模型</div>
+      <div style="padding:0 12px 6px">
+        <button class="btn sm" id="openBtn" style="width:100%" data-i18n="打开模型…">打开模型…</button>
+        <div id="curFile" style="font-size:11px;color:#6f7a87;margin-top:5px;
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
+      <div class="tree-sec" data-i18n="游戏内置">游戏内置</div>
+      <div class="tree" style="padding-top:0">
+        <div class="tree-item" id="gameSdBtn"><span class="ico">▤</span><span class="lbl" data-i18n="经典版模型">经典版模型</span></div>
+        <div class="tree-item" id="gameHdBtn"><span class="ico">▤</span><span class="lbl" data-i18n="重制版模型">重制版模型</span></div>
+      </div>
+    </aside>
+
+    <section class="center">
+    <div class="viewport">
+      <canvas class="vp-canvas" id="vp"></canvas>
+      <div class="vp-fallback" id="vpFallback"></div>
+
+      <div class="hud hud-tl">
+        <div class="t1" id="vpName">—</div>
+        <div class="t2" id="vpMeta"></div>
+      </div>
+      <div class="hud hud-tr">
+        <div class="seg" id="previewSeg">
+          <button data-p="solid" class="on" data-i18n="实体">实体</button>
+          <button data-p="wire" data-i18n="线框">线框</button>
+        </div>
+      </div>
+      <div class="hud hud-br">
+        <div class="zbar"><i id="zoomBar"></i></div><span id="zoomTxt">100%</span>
+      </div>
+    </div>
+
+    <div class="splitter" id="splitter"><i></i></div>
+
+      <div class="tablewrap" id="tablewrap">
+        <div class="tw-bar">
+          <input class="q" id="q" placeholder="搜索" data-i18n="搜索" data-i18n-attr="placeholder">
+          <div class="tabs" id="tabs"></div>
+          <div class="spacer"></div>
+          <div id="twActions"></div>
+        </div>
+        <div class="thead" id="thead"></div>
+        <div class="tbody" id="tbody"></div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <div class="insp-head" data-i18n="属性">属性</div>
+      <div class="insp-body" id="insp"></div>
+    </aside>
+  </div>
+
+  <footer class="timeline">
+    <div class="tl-bar">
+      <button class="tl-play" id="playBtn" title="播放 / 暂停（空格）">▶</button>
+      <button class="tl-opt" id="loopBtn" title="循环模式">↻</button>
+      <div class="cur" id="tlCur">—</div>
+      <div class="tl-scrub" id="tlScrub">
+        <div class="tl-bands" id="tlBands"></div>
+        <i class="tl-head" id="tlHead"></i>
+      </div>
+      <div class="tl-time num" id="tlTime">0 ms</div>
+      <button class="tl-opt wide" id="autoBtn" title="切换动画后自动播放" data-i18n="自动播">自动播</button>
+    </div>
+    <div class="tl-track" id="tlTrack"></div>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay"><div class="dialog" id="dialog"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* 启动顺序：
+   1. 加载 three.js（**必须带 token**，否则静态资源接口一律 403）
+   2. 取模型数据
+   3. 注入 app.js —— 它执行时数据与 THREE 都已就位，
+      所以里面那句 `const D = window.MDX_DATA` 不用改结构。 */
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = res;
+    s.onerror = () => rej(new Error("加载失败：" + src.split("?")[0]));
+    document.body.appendChild(s);
+  });
+}
+(async function boot() {
+  const q = new URLSearchParams(location.search);
+  const token = q.get("token") || "";
+  const api = (p, opt) => fetch(p + (p.includes("?") ? "&" : "?") +
+    "token=" + encodeURIComponent(token), opt);
+
+  const fail = (msg) => {
+    const box = document.getElementById("vpFallback");
+    if (box) {
+      box.classList.add("on");
+      box.innerHTML = '<div class="fb-card"><b>无法加载</b><span>' + msg + "</span></div>";
+    }
+  };
+
+  try {
+    await loadScript("/static/vendor/three.min.js?token=" + encodeURIComponent(token));
+    await loadScript("/static/i18n.js?token=" + encodeURIComponent(token));
+    window.MF_I18N.applyStaticI18n();
+
+    const h = await api("/api/health");
+    const hs = await h.json();
+    if (!hs.ok) throw new Error("服务未响应");
+
+    const mj = await (await api("/api/meta")).json();
+    if (!mj.ok) throw new Error(mj.error || "取模型数据失败");
+    window.MDX_DATA = mj.data;
+
+    const rj = await (await api("/api/render")).json();
+    if (!rj.ok) throw new Error(rj.error || "取渲染数据失败");
+    window.MDX_MODEL = rj.data;
+
+    const entries = {};
+    window.MDX_DATA.textures.forEach(t => { entries[t.index] = { used: true }; });
+    window.MDX_TEX = { entries: entries, dir: "" };
+    window.MDX_API = api;
+    window.MDX_TOKEN = token;
+    window.MDX_GAME = hs.game;
+    window.MDX_GAME_OK = hs.gameExists;
+    window.MDX_HAS_MODEL = !!hs.hasModel;
+  } catch (err) {
+    return fail(err.message || String(err));
+  }
+
+  try {
+    await loadScript("/static/app.js?token=" + encodeURIComponent(token));
+  } catch (err) {
+    fail(err.message || "app.js 加载失败");
+  }
+})();
+</script>
+</body>
+</html>
