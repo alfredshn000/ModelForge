@@ -16,6 +16,18 @@ team-colour switching.
 > **Compatibility**: tested against Warcraft III 3.0.0. Earlier versions are untested and not
 > guaranteed to work.
 
+## Download
+
+[Latest release](https://github.com/alfredshn000/ModelForge/releases/latest)
+
+- `ModelForge-win64.zip` — unzip and run the `ModelForge.exe` inside. Keep the whole folder together;
+  the exe will not start on its own
+- `ModelForge.exe` — single file. The first launch unpacks the runtime (~2s); later launches reuse the cache
+
+Requires Windows 10/11 x64 + WebView2 Runtime (bundled with Windows 11, usually present on Windows 10
+via Edge). Without it the program still runs, falling back to your default browser. See the
+[changelog](CHANGELOG.md) for what changed.
+
 ## What it does
 
 | Area | Detail |
